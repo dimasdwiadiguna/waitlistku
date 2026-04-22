@@ -210,6 +210,16 @@ export default function SessionPage() {
     else toast.error("Gagal menyetujui");
   };
 
+  const handleCancelOrder = async (orderId: string) => {
+    const res = await fetch(`/api/sessions/${sessionId}/orders/${orderId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "pending" }),
+    });
+    if (res.ok) { toast.success("Pesanan dibatalkan"); fetchOrders(); }
+    else toast.error("Gagal membatalkan");
+  };
+
   const handleDeleteOrder = async (orderId: string) => {
     if (!confirm(lang.order_confirm_delete)) return;
     const res = await fetch(`/api/sessions/${sessionId}/orders/${orderId}`, { method: "DELETE" });
@@ -565,8 +575,11 @@ export default function SessionPage() {
                           </td>
                           <td className="px-3 py-3">
                             <div className="flex gap-1.5 justify-center flex-wrap">
-                              {order.status !== "approved" && (
+                              {order.status === "pending" && (
                                 <button onClick={() => handleApproveOrder(order.id)} className="text-xs text-green-600 font-semibold hover:underline whitespace-nowrap">{lang.order_approve}</button>
+                              )}
+                              {order.status === "approved" && (
+                                <button onClick={() => handleCancelOrder(order.id)} className="text-xs text-orange-500 font-semibold hover:underline whitespace-nowrap">{lang.order_cancel}</button>
                               )}
                               <button onClick={() => handleSendWA(order)} className="text-xs text-teal-600 font-semibold hover:underline whitespace-nowrap">{lang.order_send_wa}</button>
                               <button onClick={() => handleDeleteOrder(order.id)} className="text-xs text-red-400 font-semibold hover:underline whitespace-nowrap">{lang.order_delete}</button>

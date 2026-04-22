@@ -24,6 +24,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sesi sudah ditutup" }, { status: 400 });
   }
 
+  // Validate quota for each item
+  const itemIds = items.map((i: { item_id: string }) => i.item_id);
+  const { data: itemsData } = await supabase
+    .from("items")
+    .select("id, stock_quota")
+    .in("id", itemIds);
+
+  for (const reqItem of items as { item_id: string; quantity: number; unit_price: number }[]) {
+    const itemData = (itemsData ?? []).find((i: { id: string; stock_quota: number | null }) => i.id === reqItem.item_id);
+    if (!itemData || itemData.stock_quota === null) continue;
+
+    const { data: consumed } = await supabase
+      .from("order_items")
+      .select("quantity, orders!inner(session_id, status)")
+      .eq("item_id", reqItem.item_id)
+      .eq("orders.session_id", session_id)
+      .neq("orders.status", "deleted");
+
+    const consumedQty = (consumed ?? []).reduce((s: number, r: { quantity: number }) => s + r.quantity, 0);
+    if (consumedQty + reqItem.quantity > itemData.stock_quota) {
+      return NextResponse.json({ error: "Kuota untuk salah satu item sudah habis" }, { status: 400 });
+    }
+  }
+
   // Calculate queue number
   const { data: maxQ } = await supabase
     .from("orders")
