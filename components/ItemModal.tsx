@@ -24,7 +24,8 @@ export default function ItemModal({
     name: "",
     description: "",
     price: "",
-    stock_quota: "",
+    stock_quota: "1",
+    has_quota: false,
   });
   const [saving, setSaving] = useState(false);
 
@@ -34,7 +35,8 @@ export default function ItemModal({
         name: item.name || "",
         description: item.description || "",
         price: item.price?.toString() || "",
-        stock_quota: item.stock_quota?.toString() || "",
+        stock_quota: item.stock_quota?.toString() || "1",
+        has_quota: item.stock_quota !== null,
       });
     }
   }, [item]);
@@ -49,7 +51,7 @@ export default function ItemModal({
       name: form.name,
       description: form.description,
       price: parseInt(form.price) || 0,
-      stock_quota: form.stock_quota ? parseInt(form.stock_quota) : null,
+      stock_quota: form.has_quota ? (parseInt(form.stock_quota) || 1) : null,
     });
     setSaving(false);
   };
@@ -75,7 +77,26 @@ export default function ItemModal({
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{lang.item_quota}</label>
-            <input type="number" value={form.stock_quota} onChange={set("stock_quota")} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder={lang.item_no_quota} />
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="has_quota"
+                checked={form.has_quota}
+                onChange={(e) => setForm((f) => ({ ...f, has_quota: e.target.checked }))}
+                className="w-4 h-4 accent-teal-600"
+              />
+              <label htmlFor="has_quota" className="text-sm text-gray-600">{lang.item_quota_limit}</label>
+            </div>
+            {form.has_quota && (
+              <input
+                type="number"
+                min={1}
+                value={form.stock_quota}
+                onChange={set("stock_quota")}
+                className="mt-2 w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                placeholder="1"
+              />
+            )}
           </div>
         </div>
         <div className="px-6 pb-6 flex gap-3">

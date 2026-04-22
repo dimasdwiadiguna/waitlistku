@@ -59,6 +59,7 @@ export default function CustomerPage() {
   const [orderSuccess, setOrderSuccess] = useState<{ queueNumber: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [orderForm, setOrderForm] = useState({ name: "", wa: "", address: "" });
+  const [itemOrderedQty, setItemOrderedQty] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchData();
@@ -74,11 +75,18 @@ export default function CustomerPage() {
         .single();
       if (sessionError || !session) { setLoading(false); return; }
 
-      const [itemsRes, promosRes, ordersCountRes] = await Promise.all([
+      const [itemsRes, promosRes, ordersCountRes, orderItemsRes] = await Promise.all([
         supabaseClient.from("items").select("*").eq("session_id", session.id).order("created_at"),
         supabaseClient.from("promos").select("*").eq("session_id", session.id),
         supabaseClient.from("orders").select("id", { count: "exact" }).eq("session_id", session.id).neq("status", "deleted"),
+        supabaseClient.from("order_items").select("item_id, quantity, orders!inner(session_id, status)").eq("orders.session_id", session.id).neq("orders.status", "deleted"),
       ]);
+
+      const orderedQtyMap: Record<string, number> = {};
+      for (const oi of orderItemsRes.data ?? []) {
+        orderedQtyMap[oi.item_id] = (orderedQtyMap[oi.item_id] || 0) + oi.quantity;
+      }
+      setItemOrderedQty(orderedQtyMap);
 
       setSessionData(session);
       setItems(itemsRes.data || []);
@@ -117,11 +125,19 @@ export default function CustomerPage() {
     return { price: item.price, isPromo: false };
   };
 
+  const getRemaining = (item: Item): number | null => {
+    if (item.stock_quota === null) return null;
+    const consumed = itemOrderedQty[item.id] || 0;
+    return Math.max(0, item.stock_quota - consumed);
+  };
+
   const setQty = (item: Item, qty: number) => {
     if (qty <= 0) {
       setCart((c) => { const n = { ...c }; delete n[item.id]; return n; });
       return;
     }
+    const remaining = getRemaining(item);
+    if (remaining !== null && qty > remaining) qty = remaining;
     const { price } = getEffectivePrice(item);
     setCart((c) => ({ ...c, [item.id]: { item, qty, unitPrice: price } }));
   };
@@ -279,7 +295,9 @@ export default function CustomerPage() {
         <div className="space-y-3">
           {items.map((item) => {
             const { price, isPromo, promoName } = getEffectivePrice(item);
-            const isOutOfStock = item.stock_quota === 0;
+            const remaining = getRemaining(item);
+            const isOutOfStock = remaining !== null && remaining <= 0;
+            const atLimit = remaining !== null && (cart[item.id]?.qty || 0) >= remaining;
             const qty = cart[item.id]?.qty || 0;
 
             return (
@@ -305,6 +323,9 @@ export default function CustomerPage() {
                       ) : (
                         <span className="font-bold text-gray-800">{formatRp(item.price)}</span>
                       )}
+                      {remaining !== null && remaining > 0 && (
+                        <span className="text-xs text-gray-400">Sisa: {remaining}</span>
+                      )}
                     </div>
                   </div>
 
@@ -319,7 +340,8 @@ export default function CustomerPage() {
                           <span className="w-5 text-center font-semibold text-sm">{qty}</span>
                           <button
                             onClick={() => setQty(item, qty + 1)}
-                            className="w-7 h-7 rounded-full bg-teal-600 text-white font-bold hover:bg-teal-700 flex items-center justify-center text-sm"
+                            disabled={atLimit}
+                            className="w-7 h-7 rounded-full bg-teal-600 text-white font-bold hover:bg-teal-700 flex items-center justify-center text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                           >+</button>
                         </div>
                       ) : (
