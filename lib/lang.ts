@@ -66,6 +66,7 @@ export const id = {
   btn_create: "Buat",
   btn_delete: "Hapus",
   btn_edit: "Edit",
+  btn_edit_settings: "Edit Pengaturan",
   btn_add: "Tambah",
   btn_import: "Import XLSX",
   btn_template: "Unduh Template",
@@ -75,6 +76,7 @@ export const id = {
   tab_products: "Produk",
   tab_promos: "Promo",
   tab_orders: "Pesanan",
+  tab_summary: "Ringkasan",
 
   // Items
   item_name: "Nama Produk",
@@ -132,6 +134,13 @@ export const id = {
   order_empty: "Belum ada pesanan.",
   order_confirm_delete: "Hapus pesanan ini?",
   order_export_disabled: "Ekspor tidak tersedia selama ada pesanan tersembunyi",
+
+  // Summary tab
+  summary_item: "Produk",
+  summary_total: "Total Dipesan",
+  summary_approved: "Disetujui",
+  summary_pending: "Menunggu",
+  summary_empty: "Belum ada data pesanan.",
 
   // Paywall
   paywall_banner: "🔒 {count} pesanan tersembunyi — Buka Sekarang",
@@ -239,6 +248,7 @@ export const en = {
   btn_create: "Create",
   btn_delete: "Delete",
   btn_edit: "Edit",
+  btn_edit_settings: "Edit Settings",
   btn_add: "Add",
   btn_import: "Import XLSX",
   btn_template: "Download Template",
@@ -248,6 +258,7 @@ export const en = {
   tab_products: "Products",
   tab_promos: "Promos",
   tab_orders: "Orders",
+  tab_summary: "Summary",
 
   // Items
   item_name: "Product Name",
@@ -305,6 +316,13 @@ export const en = {
   order_empty: "No orders yet.",
   order_confirm_delete: "Delete this order?",
   order_export_disabled: "Export unavailable while blurred rows exist",
+
+  // Summary tab
+  summary_item: "Product",
+  summary_total: "Total Ordered",
+  summary_approved: "Approved",
+  summary_pending: "Pending",
+  summary_empty: "No order data yet.",
 
   // Paywall
   paywall_banner: "🔒 {count} hidden orders — Unlock Now",

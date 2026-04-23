@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useLang } from "@/lib/LanguageContext";
+import Toggle from "@/components/Toggle";
 
 interface Item {
   id?: string;
@@ -78,12 +79,10 @@ export default function ItemModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{lang.item_quota}</label>
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Toggle
                 id="has_quota"
                 checked={form.has_quota}
-                onChange={(e) => setForm((f) => ({ ...f, has_quota: e.target.checked }))}
-                className="w-4 h-4 accent-teal-600"
+                onChange={(v) => setForm((f) => ({ ...f, has_quota: v }))}
               />
               <label htmlFor="has_quota" className="text-sm text-gray-600">{lang.item_quota_limit}</label>
             </div>

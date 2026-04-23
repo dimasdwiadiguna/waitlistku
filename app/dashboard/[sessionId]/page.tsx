@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import ItemModal from "@/components/ItemModal";
 import PromoModal from "@/components/PromoModal";
 import PaymentModal from "@/components/PaymentModal";
+import Toggle from "@/components/Toggle";
 import { useLang } from "@/lib/LanguageContext";
 import { formatRp, formatDateTime } from "@/lib/format";
 import toast from "react-hot-toast";
@@ -57,7 +58,7 @@ interface Order {
   blurred?: boolean;
 }
 
-type Tab = "products" | "promos" | "orders";
+type Tab = "products" | "promos" | "orders" | "summary";
 
 export default function SessionPage() {
   const { lang } = useLang();
@@ -76,9 +77,14 @@ export default function SessionPage() {
   const [editItem, setEditItem] = useState<Partial<Item> | null>(null);
   const [editPromo, setEditPromo] = useState<Partial<Promo> | null>(null);
   const [showPayment, setShowPayment] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [tabLoading, setTabLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
+
+  type SummaryItem = { item_id: string; item_name: string; approved_qty: number; pending_qty: number };
+  const [summary, setSummary] = useState<SummaryItem[]>([]);
 
   const [settings, setSettings] = useState({
     title: "",
@@ -97,6 +103,7 @@ export default function SessionPage() {
     if (tab === "products") fetchItems();
     else if (tab === "promos") fetchPromos();
     else if (tab === "orders") fetchOrders();
+    else if (tab === "summary") fetchSummary();
   }, [tab, sessionId]);
 
   const fetchSession = async () => {
@@ -118,16 +125,28 @@ export default function SessionPage() {
   };
 
   const fetchItems = async () => {
+    setTabLoading(true);
     const res = await fetch(`/api/sessions/${sessionId}/items`);
     if (res.ok) setItems(await res.json());
+    setTabLoading(false);
   };
 
   const fetchPromos = async () => {
+    setTabLoading(true);
     const res = await fetch(`/api/sessions/${sessionId}/promos`);
     if (res.ok) setPromos(await res.json());
+    setTabLoading(false);
+  };
+
+  const fetchSummary = async () => {
+    setTabLoading(true);
+    const res = await fetch(`/api/sessions/${sessionId}/summary`);
+    if (res.ok) setSummary(await res.json());
+    setTabLoading(false);
   };
 
   const fetchOrders = async () => {
+    setTabLoading(true);
     const res = await fetch(`/api/sessions/${sessionId}/orders`);
     if (res.ok) {
       const data = await res.json();
@@ -135,6 +154,7 @@ export default function SessionPage() {
       setOrderTotal(data.total || 0);
       setVisibleLimit(data.visibleLimit || 7);
     }
+    setTabLoading(false);
   };
 
   const saveSettings = async () => {
@@ -148,6 +168,7 @@ export default function SessionPage() {
     if (res.ok) {
       const data = await res.json();
       setSession(data);
+      setShowSettingsModal(false);
       toast.success("Pengaturan disimpan");
     } else toast.error("Gagal menyimpan");
   };
@@ -311,72 +332,109 @@ export default function SessionPage() {
       <Navbar isLoggedIn />
 
       <div className="max-w-3xl mx-auto px-4 py-6">
-        {/* Settings panel */}
+        {/* Session header — compact */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="font-extrabold text-xl text-gray-900 truncate">{session?.title}</h1>
-            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${session?.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-              {session?.is_active ? lang.session_active : lang.session_inactive}
-            </span>
-          </div>
-
-          {/* Public URL */}
-          <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 mb-4">
-            <span className="text-sm text-gray-500 truncate flex-1">{publicUrl}</span>
-            <button onClick={handleCopyUrl} className="text-xs text-teal-600 font-semibold shrink-0 hover:text-teal-700">
-              {copied ? "✓" : lang.session_copy}
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="font-extrabold text-xl text-gray-900 truncate">{session?.title}</h1>
+                <span className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${session?.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                  {session?.is_active ? lang.session_active : lang.session_inactive}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5 mt-2">
+                <span className="text-sm text-gray-500 truncate flex-1">{publicUrl}</span>
+                <button onClick={handleCopyUrl} className="text-xs text-teal-600 font-semibold shrink-0 hover:text-teal-700">
+                  {copied ? "✓" : lang.session_copy}
+                </button>
+                <a href={`/p/${session?.slug}`} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-teal-600 shrink-0">↗</a>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="shrink-0 border border-gray-200 text-gray-600 font-medium px-3 py-2 rounded-xl hover:border-teal-600 hover:text-teal-600 transition-colors text-sm"
+            >
+              {lang.btn_edit_settings}
             </button>
-            <a href={`/p/${session?.slug}`} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-teal-600 shrink-0">↗</a>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_title_label}</label>
-              <input value={settings.title} onChange={(e) => setSettings((s) => ({ ...s, title: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
-            </div>
-            <div className="flex items-center gap-2 sm:pt-5">
-              <input type="checkbox" id="active" checked={settings.is_active} onChange={(e) => setSettings((s) => ({ ...s, is_active: e.target.checked }))} className="w-4 h-4 accent-teal-600" />
-              <label htmlFor="active" className="text-sm font-medium text-gray-700">{lang.session_active_toggle}</label>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_opens_at}</label>
-              <input type="datetime-local" value={settings.opens_at} onChange={(e) => setSettings((s) => ({ ...s, opens_at: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_closes_at}</label>
-              <input type="datetime-local" value={settings.closes_at} onChange={(e) => setSettings((s) => ({ ...s, closes_at: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_intro_label}</label>
-              <textarea value={settings.intro_text} onChange={(e) => setSettings((s) => ({ ...s, intro_text: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 h-16 resize-none" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_footer_label}</label>
-              <input value={settings.footer_text} onChange={(e) => setSettings((s) => ({ ...s, footer_text: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
-            </div>
-          </div>
-          <button onClick={saveSettings} disabled={savingSettings} className="mt-4 bg-teal-600 text-white font-semibold px-5 py-2 rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-60 text-sm">
-            {savingSettings ? "Menyimpan..." : lang.btn_save}
-          </button>
         </div>
 
+        {/* Settings Modal */}
+        {showSettingsModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+              <div className="bg-teal-600 rounded-t-2xl px-6 py-4 text-white">
+                <h2 className="font-bold text-lg">{lang.btn_edit_settings}</h2>
+              </div>
+              <div className="px-6 py-5 space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_title_label}</label>
+                  <input value={settings.title} onChange={(e) => setSettings((s) => ({ ...s, title: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Toggle id="active" checked={settings.is_active} onChange={(v) => setSettings((s) => ({ ...s, is_active: v }))} />
+                  <label htmlFor="active" className="text-sm font-medium text-gray-700">{lang.session_active_toggle}</label>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_opens_at}</label>
+                    <input type="datetime-local" value={settings.opens_at} onChange={(e) => setSettings((s) => ({ ...s, opens_at: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_closes_at}</label>
+                    <input type="datetime-local" value={settings.closes_at} onChange={(e) => setSettings((s) => ({ ...s, closes_at: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_intro_label}</label>
+                  <textarea value={settings.intro_text} onChange={(e) => setSettings((s) => ({ ...s, intro_text: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 h-16 resize-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_footer_label}</label>
+                  <input value={settings.footer_text} onChange={(e) => setSettings((s) => ({ ...s, footer_text: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                </div>
+              </div>
+              <div className="px-6 pb-6 flex gap-3">
+                <button onClick={() => setShowSettingsModal(false)} className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors">{lang.btn_cancel}</button>
+                <button onClick={saveSettings} disabled={savingSettings} className="flex-1 bg-teal-600 text-white font-semibold py-2.5 rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-60">
+                  {savingSettings ? "Menyimpan..." : lang.btn_save}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 mb-6">
-          {(["products", "promos", "orders"] as Tab[]).map((t) => (
+        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+          {(["products", "promos", "orders", "summary"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+              className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
                 tab === t ? "border-teal-600 text-teal-600" : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
-              {t === "products" ? lang.tab_products : t === "promos" ? lang.tab_promos : lang.tab_orders}
+              {t === "products" ? lang.tab_products : t === "promos" ? lang.tab_promos : t === "orders" ? lang.tab_orders : lang.tab_summary}
             </button>
           ))}
         </div>
 
+        {/* Per-tab skeleton loader */}
+        {tabLoading && (
+          <div className="space-y-3 animate-pulse">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-1">
+                <div className="h-4 bg-gray-100 rounded w-2/5" />
+                <div className="h-4 bg-gray-100 rounded w-1/5" />
+                <div className="h-4 bg-gray-100 rounded w-1/5" />
+                <div className="h-4 bg-gray-100 rounded flex-1" />
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Products Tab */}
-        {tab === "products" && (
+        {!tabLoading && tab === "products" && (
           <div>
             <div className="flex flex-wrap gap-2 mb-4">
               <button onClick={() => setEditItem({})} className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-teal-700 transition-colors text-sm">
@@ -432,7 +490,7 @@ export default function SessionPage() {
         )}
 
         {/* Promos Tab */}
-        {tab === "promos" && (
+        {!tabLoading && tab === "promos" && (
           <div>
             <button onClick={() => setEditPromo({})} className="mb-4 bg-teal-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-teal-700 transition-colors text-sm">
               + {lang.promo_add}
@@ -471,7 +529,7 @@ export default function SessionPage() {
         )}
 
         {/* Orders Tab */}
-        {tab === "orders" && (
+        {!tabLoading && tab === "orders" && (
           <div>
             {/* Summary */}
             <div className="grid grid-cols-3 gap-3 mb-4">
@@ -588,6 +646,44 @@ export default function SessionPage() {
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+        {/* Summary Tab */}
+        {!tabLoading && tab === "summary" && (
+          <div>
+            {summary.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <div className="text-4xl mb-3">📊</div>
+                <p className="font-medium">{lang.summary_empty}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-gray-100">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-semibold text-gray-600">{lang.summary_item}</th>
+                      <th className="text-right px-4 py-3 font-semibold text-gray-600">{lang.summary_total}</th>
+                      <th className="text-right px-4 py-3 font-semibold text-gray-600">{lang.summary_approved}</th>
+                      <th className="text-right px-4 py-3 font-semibold text-gray-600">{lang.summary_pending}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {summary.map((row) => (
+                      <tr key={row.item_id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 font-medium text-gray-900">{row.item_name}</td>
+                        <td className="px-4 py-3 text-right text-gray-700 font-semibold">{row.approved_qty + row.pending_qty}</td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-100 text-green-700">{row.approved_qty}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">{row.pending_qty}</span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
