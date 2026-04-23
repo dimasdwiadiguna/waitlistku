@@ -106,3 +106,8 @@ create index on owner_payments(session_id, payment_status);
 -- alter table items add column if not exists is_visible boolean default true;
 -- alter table sessions add column if not exists primary_color text;
 -- alter table sessions add column if not exists accent_color text;
+
+-- Superadmin additions (run in Supabase SQL Editor)
+alter table users add column if not exists role text check (role in ('personal','tester')) default 'personal';
+alter table users add column if not exists is_banned boolean default false;
+alter table users add column if not exists last_sign_in timestamptz;
