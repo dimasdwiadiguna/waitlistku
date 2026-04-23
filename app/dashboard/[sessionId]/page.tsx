@@ -29,7 +29,7 @@ interface Item {
   description: string | null;
   price: number;
   stock_quota: number | null;
-  is_visible: boolean;
+  is_visible?: boolean;
 }
 interface Promo {
   id: string;
