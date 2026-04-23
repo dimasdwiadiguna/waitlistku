@@ -103,10 +103,13 @@ export default function CustomerPage() {
       setSessionData(session);
       setItems(itemsRes.data || []);
       setPromos(promosRes.data || []);
-      setOwnerWa("");
       const s = session;
       if (!s.is_active) { setClosed(true); }
       else if (s.closes_at && new Date(s.closes_at) < new Date()) { setClosed(true); }
+
+      // Fetch owner WA via public API (users table is not publicly readable via anon client)
+      const pubRes = await fetch(`/api/public/sessions/${slug}`);
+      if (pubRes.ok) setOwnerWa((await pubRes.json()).owner_wa || "");
     } catch (err) {
       console.error("fetchData error", err);
     } finally {
@@ -375,6 +378,20 @@ export default function CustomerPage() {
                         <span className="text-xs text-gray-400">Sisa: {remaining}</span>
                       )}
                     </div>
+                    {remaining !== null && item.stock_quota! > 0 && (
+                      <div className="mt-2 w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            remaining / item.stock_quota! > 0.5
+                              ? "bg-teal-500"
+                              : remaining / item.stock_quota! > 0.2
+                              ? "bg-amber-400"
+                              : "bg-red-400"
+                          }`}
+                          style={{ width: `${Math.max(0, (remaining / item.stock_quota!) * 100)}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {!isOutOfStock && (

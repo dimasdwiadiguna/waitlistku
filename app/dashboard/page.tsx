@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import SessionCard from "@/components/SessionCard";
+import Toggle from "@/components/Toggle";
 import { useLang } from "@/lib/LanguageContext";
 import toast from "react-hot-toast";
 
@@ -157,12 +158,10 @@ export default function DashboardPage() {
                 </FormField>
               </div>
               <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
+                <Toggle
                   id="is_active"
                   checked={form.is_active}
-                  onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
-                  className="w-4 h-4 accent-teal-600"
+                  onChange={(v) => setForm((f) => ({ ...f, is_active: v }))}
                 />
                 <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
                   {lang.session_active_toggle}
