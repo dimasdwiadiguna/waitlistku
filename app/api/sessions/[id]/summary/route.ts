@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     .from("sessions")
     .select("id")
     .eq("id", params.id)
-    .eq("owner_id", user.id)
+    .eq("owner_id", user.userId)
     .single();
   if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
