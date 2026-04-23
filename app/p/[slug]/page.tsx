@@ -39,6 +39,7 @@ interface CartItem {
   item: Item;
   qty: number;
   unitPrice: number;
+  promoName?: string;
 }
 
 export default function CustomerPage() {
@@ -60,6 +61,8 @@ export default function CustomerPage() {
   const [submitting, setSubmitting] = useState(false);
   const [orderForm, setOrderForm] = useState({ name: "", wa: "", address: "" });
   const [itemOrderedQty, setItemOrderedQty] = useState<Record<string, number>>({});
+  const [itemBuyerCount, setItemBuyerCount] = useState<Record<string, number>>({});
+  const [sessionOrderCount, setSessionOrderCount] = useState(0);
 
   useEffect(() => {
     fetchData();
@@ -79,14 +82,23 @@ export default function CustomerPage() {
         supabaseClient.from("items").select("*").eq("session_id", session.id).order("created_at"),
         supabaseClient.from("promos").select("*").eq("session_id", session.id),
         supabaseClient.from("orders").select("id", { count: "exact" }).eq("session_id", session.id).neq("status", "deleted"),
-        supabaseClient.from("order_items").select("item_id, quantity, orders!inner(session_id, status)").eq("orders.session_id", session.id).neq("orders.status", "deleted"),
+        supabaseClient.from("order_items").select("order_id, item_id, quantity, orders!inner(session_id, status)").eq("orders.session_id", session.id).neq("orders.status", "deleted"),
       ]);
 
       const orderedQtyMap: Record<string, number> = {};
+      const buyerSetMap: Record<string, Set<string>> = {};
       for (const oi of orderItemsRes.data ?? []) {
         orderedQtyMap[oi.item_id] = (orderedQtyMap[oi.item_id] || 0) + oi.quantity;
+        if (!buyerSetMap[oi.item_id]) buyerSetMap[oi.item_id] = new Set();
+        buyerSetMap[oi.item_id].add(oi.order_id);
+      }
+      const buyerCountMap: Record<string, number> = {};
+      for (const itemId in buyerSetMap) {
+        buyerCountMap[itemId] = buyerSetMap[itemId].size;
       }
       setItemOrderedQty(orderedQtyMap);
+      setItemBuyerCount(buyerCountMap);
+      setSessionOrderCount(ordersCountRes.count || 0);
 
       setSessionData(session);
       setItems(itemsRes.data || []);
@@ -102,6 +114,26 @@ export default function CustomerPage() {
     }
   };
 
+  const getFirstNPromoStatus = (item: Item): {
+    promo: Promo; buyerCount: number; remaining: number; isExpired: boolean;
+  } | null => {
+    for (const promo of promos) {
+      if (promo.promo_type !== "first_n_customers") continue;
+      const applicable =
+        promo.applies_to === "session" ||
+        (promo.applies_to === "item" && promo.item_id === item.id);
+      if (!applicable) continue;
+
+      const buyerCount = promo.applies_to === "session"
+        ? sessionOrderCount
+        : (itemBuyerCount[item.id] || 0);
+      const isExpired = promo.max_count !== null && buyerCount >= promo.max_count;
+      const remaining = promo.max_count !== null ? Math.max(0, promo.max_count - buyerCount) : 0;
+      return { promo, buyerCount, remaining, isExpired };
+    }
+    return null;
+  };
+
   // Compute effective promos for an item
   const getEffectivePrice = (item: Item): { price: number; isPromo: boolean; promoName?: string } => {
     if (activeCoupon) {
@@ -109,6 +141,11 @@ export default function CustomerPage() {
         (activeCoupon.applies_to === "session") ||
         (activeCoupon.applies_to === "item" && activeCoupon.item_id === item.id);
       if (applicable) return { price: activeCoupon.promo_price, isPromo: true, promoName: activeCoupon.name };
+    }
+
+    const firstNStatus = getFirstNPromoStatus(item);
+    if (firstNStatus && !firstNStatus.isExpired) {
+      return { price: firstNStatus.promo.promo_price, isPromo: true, promoName: firstNStatus.promo.name };
     }
 
     const now = new Date();
@@ -138,8 +175,8 @@ export default function CustomerPage() {
     }
     const remaining = getRemaining(item);
     if (remaining !== null && qty > remaining) qty = remaining;
-    const { price } = getEffectivePrice(item);
-    setCart((c) => ({ ...c, [item.id]: { item, qty, unitPrice: price } }));
+    const { price, promoName } = getEffectivePrice(item);
+    setCart((c) => ({ ...c, [item.id]: { item, qty, unitPrice: price, promoName } }));
   };
 
   const addToCart = (item: Item) => {
@@ -295,6 +332,7 @@ export default function CustomerPage() {
         <div className="space-y-3">
           {items.map((item) => {
             const { price, isPromo, promoName } = getEffectivePrice(item);
+            const firstNStatus = getFirstNPromoStatus(item);
             const remaining = getRemaining(item);
             const isOutOfStock = remaining !== null && remaining <= 0;
             const atLimit = remaining !== null && (cart[item.id]?.qty || 0) >= remaining;
@@ -309,7 +347,17 @@ export default function CustomerPage() {
                       {isOutOfStock && (
                         <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-medium">{lang.customer_habis}</span>
                       )}
-                      {isPromo && !isOutOfStock && (
+                      {firstNStatus && !firstNStatus.isExpired && !isOutOfStock && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">
+                          {lang.promo_first_n_remaining.replace("{count}", String(firstNStatus.remaining))}
+                        </span>
+                      )}
+                      {firstNStatus && firstNStatus.isExpired && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">
+                          {lang.promo_first_n_expired}
+                        </span>
+                      )}
+                      {isPromo && !isOutOfStock && !firstNStatus && (
                         <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "#C9A84C", color: "white" }}>{lang.customer_promo_badge}</span>
                       )}
                     </div>
@@ -440,12 +488,23 @@ export default function CustomerPage() {
 
                 {/* Summary */}
                 <div className="bg-gray-50 rounded-xl p-4 mb-5 space-y-2">
-                  {Object.values(cart).map((c) => (
-                    <div key={c.item.id} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700">{c.item.name} <span className="text-gray-400">x{c.qty}</span></span>
-                      <span className="font-medium text-gray-900">{formatRp(c.unitPrice * c.qty)}</span>
-                    </div>
-                  ))}
+                  {Object.values(cart).map((c) => {
+                    const discountAmount = (c.item.price - c.unitPrice) * c.qty;
+                    return (
+                      <div key={c.item.id} className="space-y-0.5">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-700">{c.item.name} <span className="text-gray-400">x{c.qty}</span></span>
+                          <span className="font-medium text-gray-900">{formatRp(c.item.price * c.qty)}</span>
+                        </div>
+                        {discountAmount > 0 && (
+                          <div className="flex items-center justify-between text-xs text-green-600">
+                            <span>{lang.promo_discount} {c.promoName}</span>
+                            <span>-{formatRp(discountAmount)}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
                     <span>Total</span>
                     <span className="text-teal-600">{formatRp(totalPrice)}</span>
