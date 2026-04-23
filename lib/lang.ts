@@ -105,6 +105,9 @@ export const id = {
   promo_empty: "Belum ada promo.",
   promo_add: "Tambah Promo",
   promo_edit: "Edit Promo",
+  promo_first_n_remaining: "{count} pembeli lagi yang berhak untuk promo!",
+  promo_first_n_expired: "Promo telah habis",
+  promo_discount: "Diskon",
 
   // Orders
   order_total_label: "Total Pesanan",
@@ -275,6 +278,9 @@ export const en = {
   promo_empty: "No promos yet.",
   promo_add: "Add Promo",
   promo_edit: "Edit Promo",
+  promo_first_n_remaining: "{count} more buyers eligible for promo!",
+  promo_first_n_expired: "Promo expired",
+  promo_discount: "Discount",
 
   // Orders
   order_total_label: "Total Orders",
