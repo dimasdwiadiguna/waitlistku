@@ -21,13 +21,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     .eq("orders.session_id", params.id)
     .neq("orders.status", "deleted");
 
-  type Row = { item_id: string; quantity: number; items: { name: string } | null; orders: { status: string } | null };
+  type Row = { item_id: string; quantity: number; items: { name: string }[] | null; orders: { status: string }[] | null };
 
   const map: Record<string, { name: string; approved: number; pending: number }> = {};
-  for (const row of (rows ?? []) as Row[]) {
+  for (const row of (rows ?? []) as unknown as Row[]) {
     const id = row.item_id;
-    const name = row.items?.name ?? "—";
-    const status = row.orders?.status;
+    const name = (Array.isArray(row.items) ? row.items[0]?.name : null) ?? "—";
+    const status = Array.isArray(row.orders) ? row.orders[0]?.status : null;
     if (!map[id]) map[id] = { name, approved: 0, pending: 0 };
     if (status === "approved") map[id].approved += row.quantity;
     else if (status === "pending") map[id].pending += row.quantity;
