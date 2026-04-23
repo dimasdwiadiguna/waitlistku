@@ -20,6 +20,8 @@ interface Session {
   closes_at: string | null;
   is_active: boolean;
   owner_id: string;
+  primary_color: string | null;
+  accent_color: string | null;
 }
 interface Item {
   id: string;
@@ -27,6 +29,7 @@ interface Item {
   description: string | null;
   price: number;
   stock_quota: number | null;
+  is_visible: boolean;
 }
 interface Promo {
   id: string;
@@ -78,7 +81,9 @@ export default function SessionPage() {
   const [editPromo, setEditPromo] = useState<Partial<Promo> | null>(null);
   const [showPayment, setShowPayment] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showStylingModal, setShowStylingModal] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [savingStyling, setSavingStyling] = useState(false);
   const [tabLoading, setTabLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
@@ -93,6 +98,11 @@ export default function SessionPage() {
     opens_at: "",
     closes_at: "",
     is_active: true,
+  });
+
+  const [styling, setStyling] = useState({
+    primary_color: "",
+    accent_color: "",
   });
 
   useEffect(() => {
@@ -119,6 +129,10 @@ export default function SessionPage() {
       opens_at: data.opens_at ? data.opens_at.slice(0, 16) : "",
       closes_at: data.closes_at ? data.closes_at.slice(0, 16) : "",
       is_active: data.is_active ?? true,
+    });
+    setStyling({
+      primary_color: data.primary_color || "",
+      accent_color: data.accent_color || "",
     });
     setLoading(false);
     fetchItems();
@@ -162,7 +176,7 @@ export default function SessionPage() {
     const res = await fetch(`/api/sessions/${sessionId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(settings),
+      body: JSON.stringify({ ...settings, primary_color: styling.primary_color || null, accent_color: styling.accent_color || null }),
     });
     setSavingSettings(false);
     if (res.ok) {
@@ -171,6 +185,37 @@ export default function SessionPage() {
       setShowSettingsModal(false);
       toast.success("Pengaturan disimpan");
     } else toast.error("Gagal menyimpan");
+  };
+
+  const saveStyling = async () => {
+    setSavingStyling(true);
+    const res = await fetch(`/api/sessions/${sessionId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...settings, primary_color: styling.primary_color || null, accent_color: styling.accent_color || null }),
+    });
+    setSavingStyling(false);
+    if (res.ok) {
+      const data = await res.json();
+      setSession(data);
+      setStyling({ primary_color: data.primary_color || "", accent_color: data.accent_color || "" });
+      setShowStylingModal(false);
+      toast.success("Tampilan disimpan");
+    } else toast.error("Gagal menyimpan");
+  };
+
+  const handleToggleVisibility = async (item: Item) => {
+    const newVisible = !item.is_visible;
+    setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, is_visible: newVisible } : i));
+    const res = await fetch(`/api/sessions/${sessionId}/items/${item.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: item.name, description: item.description, price: item.price, stock_quota: item.stock_quota, is_visible: newVisible }),
+    });
+    if (!res.ok) {
+      setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, is_visible: item.is_visible } : i));
+      toast.error("Gagal mengubah visibilitas");
+    }
   };
 
   const handleSaveItem = async (data: Omit<Item, "id">) => {
@@ -350,14 +395,73 @@ export default function SessionPage() {
                 <a href={`/p/${session?.slug}`} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-teal-600 shrink-0">↗</a>
               </div>
             </div>
-            <button
-              onClick={() => setShowSettingsModal(true)}
-              className="shrink-0 border border-gray-200 text-gray-600 font-medium px-3 py-2 rounded-xl hover:border-teal-600 hover:text-teal-600 transition-colors text-sm"
-            >
-              {lang.btn_edit_settings}
-            </button>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={() => setShowStylingModal(true)}
+                className="border border-gray-200 text-gray-600 font-medium px-3 py-2 rounded-xl hover:border-purple-500 hover:text-purple-600 transition-colors text-sm"
+              >
+                🎨 {lang.btn_styling}
+              </button>
+              <button
+                onClick={() => setShowSettingsModal(true)}
+                className="border border-gray-200 text-gray-600 font-medium px-3 py-2 rounded-xl hover:border-teal-600 hover:text-teal-600 transition-colors text-sm"
+              >
+                {lang.btn_edit_settings}
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Styling Modal */}
+        {showStylingModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+              <div className="bg-purple-600 rounded-t-2xl px-6 py-4 text-white">
+                <h2 className="font-bold text-lg">🎨 {lang.styling_title}</h2>
+              </div>
+              <div className="px-6 py-5 space-y-5">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">{lang.styling_primary}</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={styling.primary_color || "#0d9488"}
+                      onChange={(e) => setStyling((s) => ({ ...s, primary_color: e.target.value }))}
+                      className="w-12 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
+                    />
+                    <span className="text-sm text-gray-500 font-mono">{styling.primary_color || "#0d9488"}</span>
+                    {styling.primary_color && (
+                      <button onClick={() => setStyling((s) => ({ ...s, primary_color: "" }))} className="text-xs text-gray-400 hover:text-red-400">Reset</button>
+                    )}
+                  </div>
+                  <div className="mt-2 h-8 rounded-lg transition-all" style={{ background: styling.primary_color || "#0d9488" }} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">{lang.styling_accent}</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={styling.accent_color || "#C9A84C"}
+                      onChange={(e) => setStyling((s) => ({ ...s, accent_color: e.target.value }))}
+                      className="w-12 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
+                    />
+                    <span className="text-sm text-gray-500 font-mono">{styling.accent_color || "#C9A84C"}</span>
+                    {styling.accent_color && (
+                      <button onClick={() => setStyling((s) => ({ ...s, accent_color: "" }))} className="text-xs text-gray-400 hover:text-red-400">Reset</button>
+                    )}
+                  </div>
+                  <div className="mt-2 h-8 rounded-lg transition-all" style={{ background: styling.accent_color || "#C9A84C" }} />
+                </div>
+              </div>
+              <div className="px-6 pb-6 flex gap-3">
+                <button onClick={() => setShowStylingModal(false)} className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors">{lang.btn_cancel}</button>
+                <button onClick={saveStyling} disabled={savingStyling} className="flex-1 bg-purple-600 text-white font-semibold py-2.5 rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-60">
+                  {savingStyling ? "Menyimpan..." : lang.btn_save}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Settings Modal */}
         {showSettingsModal && (
@@ -462,18 +566,25 @@ export default function SessionPage() {
                       <th className="text-left px-4 py-3 font-semibold text-gray-600">{lang.item_name}</th>
                       <th className="text-right px-4 py-3 font-semibold text-gray-600">{lang.item_price}</th>
                       <th className="text-right px-4 py-3 font-semibold text-gray-600">{lang.item_quota}</th>
+                      <th className="text-center px-4 py-3 font-semibold text-gray-600">{lang.item_visible}</th>
                       <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {items.map((item) => (
-                      <tr key={item.id} className="bg-white hover:bg-gray-50">
+                      <tr key={item.id} className={`bg-white hover:bg-gray-50 ${item.is_visible === false ? "opacity-50" : ""}`}>
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900">{item.name}</div>
                           {item.description && <div className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{item.description}</div>}
                         </td>
                         <td className="px-4 py-3 text-right font-medium text-teal-700">{formatRp(item.price)}</td>
                         <td className="px-4 py-3 text-right text-gray-500">{item.stock_quota ?? lang.item_no_quota}</td>
+                        <td className="px-4 py-3 text-center">
+                          <Toggle
+                            checked={item.is_visible !== false}
+                            onChange={() => handleToggleVisibility(item)}
+                          />
+                        </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex gap-2 justify-end">
                             <button onClick={() => setEditItem(item)} className="text-xs text-teal-600 font-semibold hover:underline">{lang.btn_edit}</button>

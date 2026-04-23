@@ -25,6 +25,8 @@ create table sessions (
   opens_at timestamptz,
   closes_at timestamptz,
   is_active boolean default true,
+  primary_color text,
+  accent_color text,
   created_at timestamptz default now()
 );
 
@@ -36,6 +38,7 @@ create table items (
   description text,
   price integer not null default 0,
   stock_quota integer,
+  is_visible boolean default true,
   created_at timestamptz default now()
 );
 
@@ -98,3 +101,8 @@ create index on orders(session_id);
 create index on orders(session_id, queue_number);
 create index on order_items(order_id);
 create index on owner_payments(session_id, payment_status);
+
+-- Migration: run these if upgrading an existing database
+-- alter table items add column if not exists is_visible boolean default true;
+-- alter table sessions add column if not exists primary_color text;
+-- alter table sessions add column if not exists accent_color text;

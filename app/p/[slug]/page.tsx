@@ -16,6 +16,8 @@ interface SessionData {
   closes_at: string | null;
   opens_at: string | null;
   slug: string;
+  primary_color: string | null;
+  accent_color: string | null;
 }
 interface Item {
   id: string;
@@ -101,7 +103,7 @@ export default function CustomerPage() {
       setSessionOrderCount(ordersCountRes.count || 0);
 
       setSessionData(session);
-      setItems(itemsRes.data || []);
+      setItems((itemsRes.data || []).filter((item) => item.is_visible !== false));
       setPromos(promosRes.data || []);
       const s = session;
       if (!s.is_active) { setClosed(true); }
@@ -305,7 +307,10 @@ export default function CustomerPage() {
       <CountdownBanner closesAt={sessionData.closes_at} />
 
       {/* Hero */}
-      <div className="bg-gradient-to-br from-teal-600 to-teal-800 text-white px-4 py-10">
+      <div
+        className="text-white px-4 py-10"
+        style={{ background: sessionData.primary_color || "linear-gradient(135deg, #0d9488, #115e59)" }}
+      >
         <div className="max-w-xl mx-auto text-center">
           <h1 className="text-2xl md:text-3xl font-extrabold mb-3">{sessionData.title}</h1>
           {sessionData.intro_text && <p className="text-teal-100 text-sm leading-relaxed">{sessionData.intro_text}</p>}
@@ -325,7 +330,7 @@ export default function CustomerPage() {
           if (p.promo_type === "before_deadline" && p.deadline) return new Date(p.deadline) > new Date();
           return p.promo_type === "first_n_customers" || p.promo_type === "coupon";
         }).map((promo) => (
-          <div key={promo.id} className="rounded-xl px-4 py-3 text-sm font-medium" style={{ background: "#C9A84C", color: "white" }}>
+          <div key={promo.id} className="rounded-xl px-4 py-3 text-sm font-medium" style={{ background: sessionData.accent_color || "#C9A84C", color: "white" }}>
             🎁 {promo.name} — {formatRp(promo.promo_price)}
             {promo.coupon_code && <span className="ml-2 bg-white/20 px-2 py-0.5 rounded text-xs">Kode: {promo.coupon_code}</span>}
           </div>
@@ -361,7 +366,7 @@ export default function CustomerPage() {
                         </span>
                       )}
                       {isPromo && !isOutOfStock && !firstNStatus && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "#C9A84C", color: "white" }}>{lang.customer_promo_badge}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: sessionData.accent_color || "#C9A84C", color: "white" }}>{lang.customer_promo_badge}</span>
                       )}
                     </div>
                     {item.description && <p className="text-xs text-gray-400 mt-0.5">{item.description}</p>}

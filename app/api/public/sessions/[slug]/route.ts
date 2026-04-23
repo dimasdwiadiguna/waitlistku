@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
   if (!session) return NextResponse.json({ error: "Tidak ditemukan" }, { status: 404 });
 
   const [itemsRes, promosRes, ordersCountRes] = await Promise.all([
-    supabase.from("items").select("*").eq("session_id", session.id).order("created_at"),
+    supabase.from("items").select("*").eq("session_id", session.id).neq("is_visible", false).order("created_at"),
     supabase.from("promos").select("*").eq("session_id", session.id),
     supabase.from("orders").select("id", { count: "exact" }).eq("session_id", session.id).neq("status", "deleted"),
   ]);

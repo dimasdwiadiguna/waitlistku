@@ -22,7 +22,7 @@ export async function PUT(
   const owned = await verifyOwner(params.id, user.userId);
   if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const { name, description, price, stock_quota } = await req.json();
+  const { name, description, price, stock_quota, is_visible } = await req.json();
 
   const { data, error } = await supabase
     .from("items")
@@ -31,6 +31,7 @@ export async function PUT(
       description: description || null,
       price: Number(price),
       stock_quota: stock_quota != null ? Number(stock_quota) : null,
+      ...(is_visible !== undefined && { is_visible }),
     })
     .eq("id", params.itemId)
     .eq("session_id", params.id)

@@ -182,6 +182,15 @@ export const id = {
   countdown_seconds: "detik",
   customer_qty: "Qty",
   customer_add_to_cart: "Tambah",
+
+  // Item visibility
+  item_visible: "Tampil",
+
+  // Styling modal
+  btn_styling: "Styling",
+  styling_title: "Tampilan Halaman",
+  styling_primary: "Warna Primer (Hero)",
+  styling_accent: "Warna Aksen (Promo & Badge)",
 };
 
 export const en = {
@@ -368,6 +377,15 @@ export const en = {
   countdown_seconds: "seconds",
   customer_qty: "Qty",
   customer_add_to_cart: "Add",
+
+  // Item visibility
+  item_visible: "Visible",
+
+  // Styling modal
+  btn_styling: "Styling",
+  styling_title: "Page Styling",
+  styling_primary: "Primary Color (Hero)",
+  styling_accent: "Accent Color (Promo & Badge)",
 };
 
 export type LangKeys = keyof typeof id;
