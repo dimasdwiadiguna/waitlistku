@@ -3,11 +3,35 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLang } from "@/lib/LanguageContext";
 import toast from "react-hot-toast";
+import { useState, useEffect } from "react";
+
+interface MeData {
+  business_name: string;
+  role: string;
+}
 
 export default function Navbar({ isLoggedIn }: { isLoggedIn?: boolean }) {
   const { lang, locale, toggleLang } = useLang();
   const pathname = usePathname();
   const router = useRouter();
+  const [me, setMe] = useState<MeData | null>(null);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    fetch("/api/auth/me")
+      .then((r) => {
+        if (r.status === 403) {
+          // Banned — force logout
+          fetch("/api/auth/logout", { method: "POST" }).then(() => {
+            router.push("/login?banned=1");
+          });
+          return null;
+        }
+        return r.ok ? r.json() : null;
+      })
+      .then((data) => data && setMe(data))
+      .catch(() => null);
+  }, [isLoggedIn]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -35,13 +59,29 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn?: boolean }) {
             <>
               <Link
                 href="/dashboard"
-                className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
                   pathname.startsWith("/dashboard")
                     ? "bg-teal-600 text-white"
                     : "text-gray-600 hover:text-teal-600"
                 }`}
               >
-                {lang.nav_dashboard}
+                {me?.business_name || lang.nav_dashboard}
+                {me?.role === "tester" && (
+                  <span
+                    style={{
+                      background: "rgba(108,99,255,0.15)",
+                      color: "#6C63FF",
+                      border: "1px solid rgba(108,99,255,0.4)",
+                      borderRadius: "999px",
+                      padding: "0 0.4rem",
+                      fontSize: "0.65rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    TESTER
+                  </span>
+                )}
               </Link>
               <button
                 onClick={handleLogout}

@@ -1,16 +1,25 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useLang } from "@/lib/LanguageContext";
+import { Suspense } from "react";
 
-export default function LoginPage() {
+function LoginForm() {
   const { lang } = useLang();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [bannedMsg, setBannedMsg] = useState("");
+
+  useEffect(() => {
+    if (searchParams.get("banned") === "1") {
+      setBannedMsg("Akun kamu dinonaktifkan. Hubungi kami untuk informasi lebih lanjut.");
+    }
+  }, [searchParams]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -46,6 +55,11 @@ export default function LoginPage() {
           <h1 className="font-semibold text-lg">{lang.login_title}</h1>
         </div>
         <div className="bg-white rounded-b-2xl shadow-sm px-6 py-6 space-y-4">
+          {bannedMsg && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+              {bannedMsg}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{lang.login_email}</label>
             <input
@@ -84,5 +98,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
