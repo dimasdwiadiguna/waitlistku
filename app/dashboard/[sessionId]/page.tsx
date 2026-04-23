@@ -7,7 +7,7 @@ import PromoModal from "@/components/PromoModal";
 import PaymentModal from "@/components/PaymentModal";
 import Toggle from "@/components/Toggle";
 import { useLang } from "@/lib/LanguageContext";
-import { formatRp, formatDateTime } from "@/lib/format";
+import { formatRp, formatDateTime, toWaNumber } from "@/lib/format";
 import toast from "react-hot-toast";
 
 interface Session {
@@ -253,7 +253,7 @@ export default function SessionPage() {
       .map((oi) => `${oi.items?.name} x${oi.quantity} — ${formatRp(oi.unit_price * oi.quantity)}`)
       .join("\n");
     const msg = `Halo! Saya ingin mengkonfirmasi preorder:\n${lines}\nTotal: ${formatRp(order.total_price)}\nNama: ${order.customer_name}\nAntrian: #${order.queue_number}\nStatus: DISETUJUI ✅`;
-    window.open(`https://wa.me/${order.customer_wa.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+    window.open(`https://wa.me/${toWaNumber(order.customer_wa)}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   const handleImportXlsx = async (e: React.ChangeEvent<HTMLInputElement>) => {
