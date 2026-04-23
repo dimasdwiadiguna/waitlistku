@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { supabaseClient } from "@/lib/supabaseClient";
 import CountdownBanner from "@/components/CountdownBanner";
 import { useLang } from "@/lib/LanguageContext";
-import { formatRp } from "@/lib/format";
+import { formatRp, toWaNumber } from "@/lib/format";
 import toast from "react-hot-toast";
 
 interface SessionData {
@@ -259,7 +259,7 @@ export default function CustomerPage() {
       .join("\n");
     const msg = `Halo! Saya ingin preorder 🛍️\n${lines}\nTotal: ${formatRp(totalPrice)}\nNama: ${orderForm.name}\nWA: ${orderForm.wa}\nAlamat: ${orderForm.address}\nAntrian: #${queueNumber}\nBukti bayar segera saya kirim. Terima kasih!`;
 
-    window.open(`https://wa.me/${ownerWa.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+    window.open(`https://wa.me/${toWaNumber(ownerWa)}?text=${encodeURIComponent(msg)}`, "_blank");
     setOrderSuccess({ queueNumber });
   };
 
@@ -301,7 +301,7 @@ export default function CustomerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-32">
       <CountdownBanner closesAt={sessionData.closes_at} />
 
       {/* Hero */}
@@ -457,9 +457,22 @@ export default function CustomerPage() {
         <div className="text-center text-xs text-gray-300 py-2">{lang.customer_made_with}</div>
       </div>
 
+      {/* Sticky Promo Banner */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 shadow-lg">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-3 px-4 py-2.5">
+          <p className="text-xs font-medium text-gray-600 leading-tight">Tertarik bikin halaman preorder seperti ini?</p>
+          <a
+            href="/register"
+            className="shrink-0 bg-teal-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-teal-700 transition-colors whitespace-nowrap"
+          >
+            Buat gratis
+          </a>
+        </div>
+      </div>
+
       {/* Sticky Cart Bar */}
       {totalItems > 0 && !showOrderModal && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-4">
+        <div className="fixed bottom-11 left-0 right-0 z-40 px-4 pb-2">
           <button
             onClick={() => setShowOrderModal(true)}
             className="w-full max-w-xl mx-auto block bg-teal-600 text-white rounded-xl py-4 px-6 shadow-lg"
