@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`order:${ip}`, 10, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "Terlalu banyak percobaan. Coba lagi dalam 1 jam." }, { status: 429 });
+  }
+
   const body = await req.json();
   const { session_id, customer_name, customer_wa, customer_address, items } = body;
 
@@ -22,6 +28,19 @@ export async function POST(req: NextRequest) {
 
   if (session.closes_at && new Date(session.closes_at) < new Date()) {
     return NextResponse.json({ error: "Sesi sudah ditutup" }, { status: 400 });
+  }
+
+  // Prevent duplicate orders from the same WA number in this session
+  const { data: existingOrder } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("session_id", session_id)
+    .eq("customer_wa", customer_wa)
+    .neq("status", "deleted")
+    .limit(1)
+    .single();
+  if (existingOrder) {
+    return NextResponse.json({ error: "Nomor WhatsApp ini sudah memiliki pesanan aktif untuk sesi ini." }, { status: 409 });
   }
 
   // Validate quota for each item
