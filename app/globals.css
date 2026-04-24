@@ -15,6 +15,11 @@ body {
   font-family: "Plus Jakarta Sans", sans-serif;
 }
 
+/* Prevent iOS auto-zoom on input focus (triggers when font-size < 16px) */
+input, textarea, select {
+  font-size: 16px;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

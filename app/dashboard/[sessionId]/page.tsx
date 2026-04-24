@@ -22,6 +22,7 @@ interface Session {
   owner_id: string;
   primary_color: string | null;
   accent_color: string | null;
+  payment_instructions: string | null;
 }
 interface Item {
   id: string;
@@ -98,6 +99,7 @@ export default function SessionPage() {
     opens_at: "",
     closes_at: "",
     is_active: true,
+    payment_instructions: "",
   });
 
   const [styling, setStyling] = useState({
@@ -129,6 +131,7 @@ export default function SessionPage() {
       opens_at: data.opens_at ? data.opens_at.slice(0, 16) : "",
       closes_at: data.closes_at ? data.closes_at.slice(0, 16) : "",
       is_active: data.is_active ?? true,
+      payment_instructions: data.payment_instructions || "",
     });
     setStyling({
       primary_color: data.primary_color || "",
@@ -496,6 +499,15 @@ export default function SessionPage() {
                 <div>
                   <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_footer_label}</label>
                   <input value={settings.footer_text} onChange={(e) => setSettings((s) => ({ ...s, footer_text: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_payment_instructions_label}</label>
+                  <textarea
+                    value={settings.payment_instructions}
+                    onChange={(e) => setSettings((s) => ({ ...s, payment_instructions: e.target.value }))}
+                    placeholder={lang.session_payment_instructions_placeholder}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 h-24 resize-none"
+                  />
                 </div>
               </div>
               <div className="px-6 pb-6 flex gap-3">

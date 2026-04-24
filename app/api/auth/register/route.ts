@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { hashPassword, signToken, getCookieOptions } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  if (!checkRateLimit(`reg:${ip}`, 5, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "Terlalu banyak percobaan. Coba lagi dalam 1 jam." }, { status: 429 });
+  }
+
   const { email, password, business_name, wa_number } = await req.json();
 
   if (!email || !password || !business_name || !wa_number) {

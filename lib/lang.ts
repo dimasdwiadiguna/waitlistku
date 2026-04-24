@@ -183,6 +183,11 @@ export const id = {
   customer_qty: "Qty",
   customer_add_to_cart: "Tambah",
 
+  // Payment confirmation flow
+  customer_payment_instructions: "Tata Cara Pembayaran",
+  customer_confirm_payment: "Konfirmasi Pembayaran via WhatsApp",
+  customer_success_note: "Pesananmu sudah kami terima! Silakan konfirmasi pembayaran ke penjual.",
+
   // Item visibility
   item_visible: "Tampil",
 
@@ -191,6 +196,10 @@ export const id = {
   styling_title: "Tampilan Halaman",
   styling_primary: "Warna Primer (Hero)",
   styling_accent: "Warna Aksen (Promo & Badge)",
+
+  // Session payment instructions (settings modal)
+  session_payment_instructions_label: "Tata Cara Pembayaran",
+  session_payment_instructions_placeholder: "Contoh: Transfer ke BCA 1234567890 a/n Toko Saya, lalu kirim bukti pembayaran.",
 };
 
 export const en = {
@@ -378,6 +387,11 @@ export const en = {
   customer_qty: "Qty",
   customer_add_to_cart: "Add",
 
+  // Payment confirmation flow
+  customer_payment_instructions: "Payment Instructions",
+  customer_confirm_payment: "Confirm Payment via WhatsApp",
+  customer_success_note: "Your order has been received! Please confirm payment to the seller.",
+
   // Item visibility
   item_visible: "Visible",
 
@@ -386,6 +400,10 @@ export const en = {
   styling_title: "Page Styling",
   styling_primary: "Primary Color (Hero)",
   styling_accent: "Accent Color (Promo & Badge)",
+
+  // Session payment instructions (settings modal)
+  session_payment_instructions_label: "Payment Instructions",
+  session_payment_instructions_placeholder: "e.g. Transfer to BCA 1234567890 a/n My Store, then send proof of payment.",
 };
 
 export type LangKeys = keyof typeof id;

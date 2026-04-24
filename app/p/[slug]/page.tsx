@@ -18,6 +18,7 @@ interface SessionData {
   slug: string;
   primary_color: string | null;
   accent_color: string | null;
+  payment_instructions: string | null;
 }
 interface Item {
   id: string;
@@ -59,7 +60,8 @@ export default function CustomerPage() {
   const [couponInput, setCouponInput] = useState("");
   const [activeCoupon, setActiveCoupon] = useState<Promo | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState<{ queueNumber: number } | null>(null);
+  const [orderSuccess, setOrderSuccess] = useState<{ queueNumber: number; waUrl: string } | null>(null);
+  const [showPaymentAccordion, setShowPaymentAccordion] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [orderForm, setOrderForm] = useState({ name: "", wa: "", address: "" });
   const [itemOrderedQty, setItemOrderedQty] = useState<Record<string, number>>({});
@@ -255,14 +257,15 @@ export default function CustomerPage() {
     const data = await res.json();
     const queueNumber = data.queue_number;
 
-    // Build WA message
+    // Build WA confirmation message (opened only when customer clicks "Konfirmasi Pembayaran")
     const lines = Object.values(cart)
       .map((c) => `${c.item.name} x${c.qty} — ${formatRp(c.unitPrice * c.qty)}`)
       .join("\n");
-    const msg = `Halo! Saya ingin preorder 🛍️\n${lines}\nTotal: ${formatRp(totalPrice)}\nNama: ${orderForm.name}\nWA: ${orderForm.wa}\nAlamat: ${orderForm.address}\nAntrian: #${queueNumber}\nBukti bayar segera saya kirim. Terima kasih!`;
+    const msg = `Halo! Konfirmasi pesanan & pembayaran saya 🛍️\n${lines}\nTotal: ${formatRp(totalPrice)}\nNama: ${orderForm.name}\nWA: ${orderForm.wa}\nAlamat: ${orderForm.address}\nAntrian: #${queueNumber}\nTerlampir bukti pembayaran. Terima kasih!`;
+    const waUrl = `https://wa.me/${toWaNumber(ownerWa)}?text=${encodeURIComponent(msg)}`;
 
-    window.open(`https://wa.me/${toWaNumber(ownerWa)}?text=${encodeURIComponent(msg)}`, "_blank");
-    setOrderSuccess({ queueNumber });
+    setShowPaymentAccordion(false);
+    setOrderSuccess({ queueNumber, waUrl });
   };
 
   const hasCouponPromo = promos.some((p) => p.promo_type === "coupon");
@@ -501,15 +504,45 @@ export default function CustomerPage() {
         <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50">
           <div className="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
             {orderSuccess ? (
-              <div className="px-6 py-10 text-center">
-                <div className="text-5xl mb-4">🎉</div>
-                <h2 className="text-xl font-extrabold text-gray-900 mb-2">{lang.customer_success_title}</h2>
-                <p className="text-gray-500 mb-4">{lang.customer_success_desc}</p>
-                <div className="text-5xl font-extrabold text-teal-600 mb-6">#{orderSuccess.queueNumber}</div>
-                <p className="text-sm text-gray-400">Pesan WhatsApp sudah dikirim ke penjual. Tunggu konfirmasi ya!</p>
+              <div className="px-6 py-8">
+                <div className="text-center mb-6">
+                  <div className="text-5xl mb-3">🎉</div>
+                  <h2 className="text-xl font-extrabold text-gray-900 mb-1">{lang.customer_success_title}</h2>
+                  <p className="text-gray-500 text-sm mb-4">{lang.customer_success_note}</p>
+                  <div className="inline-flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-5 py-3">
+                    <span className="text-sm text-teal-700 font-medium">{lang.customer_success_desc}</span>
+                    <span className="text-3xl font-extrabold text-teal-600">#{orderSuccess.queueNumber}</span>
+                  </div>
+                </div>
+
+                {/* Payment instructions accordion */}
+                <div className="border border-gray-200 rounded-xl mb-4 overflow-hidden">
+                  <button
+                    onClick={() => setShowPaymentAccordion((v) => !v)}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-semibold text-gray-700"
+                  >
+                    <span>💳 {lang.customer_payment_instructions}</span>
+                    <span className="text-gray-400 text-xs">{showPaymentAccordion ? "▲" : "▼"}</span>
+                  </button>
+                  {showPaymentAccordion && (
+                    <div className="px-4 py-3 text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                      {sessionData?.payment_instructions || "Hubungi penjual untuk informasi pembayaran."}
+                    </div>
+                  )}
+                </div>
+
+                {/* Confirm payment button (opens wa.me) */}
+                <a
+                  href={orderSuccess.waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full text-center bg-green-500 text-white font-bold py-3.5 rounded-xl hover:bg-green-600 transition-colors text-sm mb-3"
+                >
+                  💬 {lang.customer_confirm_payment}
+                </a>
                 <button
                   onClick={() => { setShowOrderModal(false); setOrderSuccess(null); setCart({}); }}
-                  className="mt-6 w-full bg-teal-600 text-white font-semibold py-3 rounded-xl hover:bg-teal-700"
+                  className="w-full border border-gray-200 text-gray-500 font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-sm"
                 >
                   Selesai
                 </button>
