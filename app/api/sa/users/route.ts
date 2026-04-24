@@ -18,9 +18,12 @@ export async function GET(req: NextRequest) {
 
   const userIds = (users || []).map((u: { id: string }) => u.id);
 
-  const [sessionsRes, paymentsRes] = await Promise.all([
+  const [sessionsRes, subscriptionsRes] = await Promise.all([
     supabase.from("sessions").select("id, owner_id").in("owner_id", userIds),
-    supabase.from("owner_payments").select("owner_id, slots_purchased, payment_status, amount_paid").in("owner_id", userIds),
+    supabase
+      .from("subscriptions")
+      .select("owner_id, type, status, amount_paid, expires_at")
+      .in("owner_id", userIds),
   ]);
 
   const sessionsByOwner: Record<string, string[]> = {};
@@ -39,17 +42,29 @@ export async function GET(req: NextRequest) {
     ordersBySession[o.session_id] = (ordersBySession[o.session_id] || 0) + 1;
   }
 
-  type PaymentRow = { owner_id: string; payment_status: string; amount_paid: number; slots_purchased: number };
-  const allPayments = (paymentsRes.data || []) as PaymentRow[];
+  type SubRow = { owner_id: string; type: string; status: string; amount_paid: number; expires_at: string | null };
+  const allSubs = (subscriptionsRes.data || []) as SubRow[];
+  const now = new Date().toISOString();
 
   const result = (users || []).map((u: { id: string }) => {
     const sessionIds = sessionsByOwner[u.id] || [];
     const totalOrders = sessionIds.reduce((sum: number, sid: string) => sum + (ordersBySession[sid] || 0), 0);
-    const payments = allPayments.filter((p) => p.owner_id === u.id);
-    const totalPaid = payments
-      .filter((p) => p.payment_status === "paid")
-      .reduce((sum: number, p) => sum + (p.amount_paid || 0), 0);
-    return { ...u, total_sessions: sessionIds.length, total_orders: totalOrders, total_paid: totalPaid };
+    const subs = allSubs.filter((s) => s.owner_id === u.id);
+    const totalPaid = subs.filter((s) => s.status === "paid").reduce((sum, s) => sum + (s.amount_paid || 0), 0);
+
+    const hasActiveMonthly = subs.some(
+      (s) => s.type === "monthly_pass" && s.status === "paid" && s.expires_at && s.expires_at > now
+    );
+    const sessionUnlockCount = subs.filter((s) => s.type === "session_unlock" && s.status === "paid").length;
+    const subscriptionStatus = hasActiveMonthly ? "Monthly Pass" : sessionUnlockCount > 0 ? `${sessionUnlockCount} Session Unlock${sessionUnlockCount > 1 ? "s" : ""}` : "Free";
+
+    return {
+      ...u,
+      total_sessions: sessionIds.length,
+      total_orders: totalOrders,
+      total_paid: totalPaid,
+      subscription_status: subscriptionStatus,
+    };
   });
 
   return NextResponse.json(result);

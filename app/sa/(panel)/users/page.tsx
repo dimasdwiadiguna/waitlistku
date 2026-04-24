@@ -14,6 +14,7 @@ interface SAUser {
   total_sessions: number;
   total_orders: number;
   total_paid: number;
+  subscription_status: string;
 }
 
 const SA_COLORS = {
@@ -200,7 +201,7 @@ export default function SaUsersPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
             <thead>
               <tr style={{ background: "rgba(45,49,72,0.6)" }}>
-                {["Business Name", "WA Number", "Role", "Status", "Last Sign In", "Sessions", "Orders", "Actions"].map((h) => (
+                {["Business Name", "WA Number", "Role", "Subscription", "Status", "Last Sign In", "Sessions", "Orders", "Actions"].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -223,13 +224,13 @@ export default function SaUsersPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: "3rem", textAlign: "center", color: SA_COLORS.muted }}>
+                  <td colSpan={9} style={{ padding: "3rem", textAlign: "center", color: SA_COLORS.muted }}>
                     Loading…
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: "3rem", textAlign: "center", color: SA_COLORS.muted }}>
+                  <td colSpan={9} style={{ padding: "3rem", textAlign: "center", color: SA_COLORS.muted }}>
                     No users found
                   </td>
                 </tr>
@@ -249,6 +250,15 @@ export default function SaUsersPage() {
                     <td style={{ padding: "0.75rem 1rem", color: SA_COLORS.muted }}>{u.wa_number}</td>
                     <td style={{ padding: "0.75rem 1rem" }}>
                       <RoleBadge role={u.role} />
+                    </td>
+                    <td style={{ padding: "0.75rem 1rem" }}>
+                      <span style={{
+                        background: u.subscription_status === "Monthly Pass" ? "rgba(246,224,94,0.15)" : u.subscription_status === "Free" ? "rgba(113,128,150,0.15)" : "rgba(104,211,145,0.15)",
+                        color: u.subscription_status === "Monthly Pass" ? "#F6E05E" : u.subscription_status === "Free" ? SA_COLORS.muted : SA_COLORS.success,
+                        borderRadius: "999px", padding: "0.125rem 0.625rem", fontSize: "0.75rem", fontWeight: 600,
+                      }}>
+                        {u.subscription_status}
+                      </span>
                     </td>
                     <td style={{ padding: "0.75rem 1rem" }}>
                       <StatusBadge banned={u.is_banned} />

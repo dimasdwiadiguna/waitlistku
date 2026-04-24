@@ -77,6 +77,7 @@ export default function SessionPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [orderTotal, setOrderTotal] = useState(0);
   const [visibleLimit, setVisibleLimit] = useState(7);
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editItem, setEditItem] = useState<Partial<Item> | null>(null);
   const [editPromo, setEditPromo] = useState<Partial<Promo> | null>(null);
@@ -170,6 +171,7 @@ export default function SessionPage() {
       setOrders(data.orders || []);
       setOrderTotal(data.total || 0);
       setVisibleLimit(data.visibleLimit || 7);
+      setIsUnlocked(data.isUnlocked || false);
     }
     setTabLoading(false);
   };
@@ -352,7 +354,9 @@ export default function SessionPage() {
     toast.success(lang.session_copied);
   };
 
-  const hasBlurred = orderTotal > visibleLimit;
+  const hasBlurred = !isUnlocked && orderTotal > visibleLimit;
+  const showWarning6 = !isUnlocked && orderTotal === 6;
+  const showBlocked = !isUnlocked && orderTotal >= 7;
   const visibleOrders = orders.filter((o) => !o.blurred);
   const approvedCount = visibleOrders.filter((o) => o.status === "approved").length;
   const revenue = visibleOrders.reduce((s, o) => s + (o.total_price || 0), 0);
@@ -670,14 +674,26 @@ export default function SessionPage() {
               </div>
             </div>
 
-            {/* Paywall banner */}
-            {hasBlurred && (
+            {/* Paywall warning at order #6 */}
+            {showWarning6 && (
+              <div className="w-full mb-4 text-center py-3 px-4 rounded-xl text-sm font-semibold bg-amber-50 border border-amber-300 text-amber-800">
+                ⚠️ {lang.paywall_warning6}
+              </div>
+            )}
+
+            {/* Paywall blocked banner at order #7+ */}
+            {showBlocked && (
               <button
                 onClick={() => setShowPayment(true)}
-                className="w-full mb-4 text-center py-3 px-4 rounded-xl font-semibold text-sm"
+                className="w-full mb-4 text-left py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-between gap-2"
                 style={{ background: "#C9A84C", color: "white" }}
               >
-                {lang.paywall_banner.replace("{count}", String(orderTotal - visibleLimit))}
+                <span>
+                  🔒 {orderTotal - visibleLimit} pesanan tersembunyi. {lang.paywall_blocked}
+                </span>
+                <span className="shrink-0 bg-white/20 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap">
+                  {lang.paywall_cta}
+                </span>
               </button>
             )}
 
@@ -685,8 +701,8 @@ export default function SessionPage() {
             <div className="flex justify-end mb-3">
               <button
                 onClick={handleExportOrders}
-                disabled={hasBlurred}
-                title={hasBlurred ? lang.order_export_disabled : ""}
+                disabled={!isUnlocked && hasBlurred}
+                title={!isUnlocked && hasBlurred ? lang.order_export_disabled : ""}
                 className="border border-gray-200 text-gray-600 font-medium px-4 py-2 rounded-xl hover:border-teal-600 hover:text-teal-600 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ↓ {lang.btn_export}

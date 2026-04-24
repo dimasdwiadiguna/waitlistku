@@ -5,7 +5,7 @@ import { useState } from "react";
 
 const NAV_ITEMS = [
   { label: "Users", href: "users", icon: "👥" },
-  { label: "Transactions", href: "transactions", icon: "💳" },
+  { label: "Subscriptions", href: "subscriptions", icon: "💳" },
 ];
 
 export default function SaSidebar({ saPath }: { saPath: string }) {

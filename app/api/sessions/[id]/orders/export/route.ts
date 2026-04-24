@@ -3,8 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { getAuthUserFromRequest } from "@/lib/auth";
 import { exportOrdersXlsx, OrderExportRow } from "@/lib/xlsx";
 import { formatRp, formatDateTime } from "@/lib/format";
-
-const FREE_LIMIT = 7;
+import { getPaywallStatus } from "@/lib/paywall";
 
 interface OrderRow {
   customer_name: string;
@@ -29,27 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     .single();
   if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const { data: userRow } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.userId)
-    .single();
-
-  const isTester = userRow?.role === "tester";
-
-  let visibleLimit = Infinity;
-
-  if (!isTester) {
-    const { data: payments } = await supabase
-      .from("owner_payments")
-      .select("slots_purchased")
-      .eq("session_id", params.id)
-      .eq("payment_status", "paid");
-
-    const paidSlots = ((payments || []) as { slots_purchased: number }[])
-      .reduce((sum: number, p) => sum + (p.slots_purchased || 0), 0);
-    visibleLimit = FREE_LIMIT + paidSlots;
-  }
+  const paywallStatus = await getPaywallStatus(supabase, user.userId, params.id);
 
   const { data: orders, error } = await supabase
     .from("orders")
@@ -60,7 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  if (!isTester && (orders?.length || 0) > visibleLimit) {
+  if (!paywallStatus.isUnlocked && (orders?.length || 0) > paywallStatus.visibleLimit) {
     return NextResponse.json({ error: "Export tidak tersedia selama ada pesanan tersembunyi" }, { status: 403 });
   }
 

@@ -81,15 +81,16 @@ create table order_items (
   created_at timestamptz default now()
 );
 
--- Owner payment records
-create table owner_payments (
+-- Subscriptions (replaces owner_payments)
+create table subscriptions (
   id uuid primary key default uuid_generate_v4(),
   owner_id uuid references users(id) on delete cascade not null,
-  session_id uuid references sessions(id) on delete cascade not null,
-  payment_type text not null check (payment_type in ('per_order', 'pack_100')),
-  slots_purchased integer not null,
+  session_id uuid references sessions(id) on delete set null,
+  type text not null check (type in ('session_unlock', 'monthly_pass')),
+  status text default 'pending' check (status in ('pending', 'paid', 'expired')),
   amount_paid integer not null,
-  payment_status text default 'paid' check (payment_status in ('pending', 'paid', 'failed')),
+  paid_at timestamptz,
+  expires_at timestamptz,
   created_at timestamptz default now()
 );
 
@@ -101,7 +102,8 @@ create index on promos(session_id);
 create index on orders(session_id);
 create index on orders(session_id, queue_number);
 create index on order_items(order_id);
-create index on owner_payments(session_id, payment_status);
+create index on subscriptions(owner_id, status);
+create index on subscriptions(session_id, type, status);
 
 -- Migration: run these if upgrading an existing database
 -- alter table items add column if not exists is_visible boolean default true;
@@ -113,3 +115,8 @@ create index on owner_payments(session_id, payment_status);
 alter table users add column if not exists role text check (role in ('personal','tester')) default 'personal';
 alter table users add column if not exists is_banned boolean default false;
 alter table users add column if not exists last_sign_in timestamptz;
+
+-- Subscriptions migration (run to replace owner_payments)
+-- create table if not exists subscriptions ( ... see above ... );
+-- Monthly pass expires_at is set by DB trigger or application at paid_at + interval '30 days'
+-- For existing deployments: drop table owner_payments after migrating data

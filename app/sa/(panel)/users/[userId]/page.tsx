@@ -24,13 +24,15 @@ interface UserDetail {
   last_sign_in: string | null;
   created_at: string;
 }
-interface Payment {
+interface Subscription {
   id: string;
-  session_id: string;
-  payment_type: string;
-  slots_purchased: number;
+  session_id: string | null;
+  session_title: string | null;
+  type: string;
+  status: string;
   amount_paid: number;
-  payment_status: string;
+  paid_at: string | null;
+  expires_at: string | null;
   created_at: string;
 }
 interface SessionData {
@@ -47,7 +49,7 @@ interface SessionData {
   pending_count: number;
   estimated_revenue: number;
 }
-interface PaymentStats { totalPaid: number; totalPending: number; totalSlots: number }
+interface SubStats { totalPaid: number; totalPending: number; activeMonthlyUntil: string | null }
 
 function formatDate(dt: string | null) {
   if (!dt) return "—";
@@ -60,7 +62,7 @@ function formatRp(n: number) {
 function RoleBadge({ role }: { role: string }) {
   return (
     <span style={{ background: role === "tester" ? "rgba(108,99,255,0.15)" : "rgba(113,128,150,0.15)", color: role === "tester" ? C.accent : C.muted, border: `1px solid ${role === "tester" ? "rgba(108,99,255,0.4)" : "rgba(113,128,150,0.3)"}`, borderRadius: "999px", padding: "0.125rem 0.625rem", fontSize: "0.75rem", fontWeight: 600 }}>
-      {role}
+      {role === "tester" ? "TESTER" : role}
     </span>
   );
 }
@@ -68,15 +70,23 @@ function StatusBadge({ value, options }: { value: string; options: Record<string
   const s = options[value] || { bg: "rgba(113,128,150,0.15)", color: C.muted };
   return <span style={{ ...s, borderRadius: "999px", padding: "0.125rem 0.625rem", fontSize: "0.75rem", fontWeight: 600 }}>{value}</span>;
 }
+function TypeBadge({ type }: { type: string }) {
+  const isMonthly = type === "monthly_pass";
+  return (
+    <span style={{ background: isMonthly ? "rgba(246,224,94,0.15)" : "rgba(104,211,145,0.15)", color: isMonthly ? "#F6E05E" : C.success, borderRadius: "999px", padding: "0.125rem 0.625rem", fontSize: "0.75rem", fontWeight: 600 }}>
+      {isMonthly ? "Monthly Pass" : "Session Unlock"}
+    </span>
+  );
+}
 
-const paymentStatusOptions: Record<string, { bg: string; color: string }> = {
+const subStatusOptions: Record<string, { bg: string; color: string }> = {
   paid: { bg: "rgba(104,211,145,0.15)", color: C.success },
   pending: { bg: "rgba(255,193,7,0.15)", color: "#F6E05E" },
-  failed: { bg: "rgba(252,129,129,0.15)", color: C.danger },
+  expired: { bg: "rgba(252,129,129,0.15)", color: C.danger },
 };
 
 const inputStyle = { background: C.bg, border: `1px solid ${C.border}`, borderRadius: "0.625rem", padding: "0.5rem 0.875rem", color: C.text, fontSize: "0.875rem", outline: "none", width: "100%" };
-const labelStyle = { color: C.muted, fontSize: "0.8125rem", fontWeight: 500, display: "block", marginBottom: "0.375rem" };
+const labelStyle = { color: C.muted, fontSize: "0.8125rem", fontWeight: 500, display: "block" as const, marginBottom: "0.375rem" };
 
 export default function SaUserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -84,20 +94,17 @@ export default function SaUserDetailPage() {
   const [saPath, setSaPath] = useState("");
   const [user, setUser] = useState<UserDetail | null>(null);
   const [sessions, setSessions] = useState<SessionData[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [payStats, setPayStats] = useState<PaymentStats>({ totalPaid: 0, totalPending: 0, totalSlots: 0 });
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [subStats, setSubStats] = useState<SubStats>({ totalPaid: 0, totalPending: 0, activeMonthlyUntil: null });
   const [loading, setLoading] = useState(true);
 
-  // Edit modal
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({ business_name: "", whatsapp_number: "", role: "personal", new_password: "", confirm_password: "" });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
 
-  // Expanded sessions
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
 
-  // Delete / ban modals
   const [showBan, setShowBan] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [deleteConfirmWa, setDeleteConfirmWa] = useState("");
@@ -116,8 +123,8 @@ export default function SaUserDetailPage() {
     const data = await res.json();
     setUser(data.user);
     setSessions(data.sessions || []);
-    setPayments(data.payments || []);
-    setPayStats(data.payment_stats || { totalPaid: 0, totalPending: 0, totalSlots: 0 });
+    setSubscriptions(data.subscriptions || []);
+    setSubStats(data.subscription_stats || { totalPaid: 0, totalPending: 0, activeMonthlyUntil: null });
     setEditForm({
       business_name: data.user.business_name,
       whatsapp_number: data.user.wa_number,
@@ -157,21 +164,17 @@ export default function SaUserDetailPage() {
     }
   };
 
-  const handleApprovePayment = async (paymentId: string) => {
-    const res = await fetch(`/api/sa/transactions/${paymentId}/approve`, { method: "PATCH" });
+  const handleApproveSubscription = async (subId: string) => {
+    const res = await fetch(`/api/sa/subscriptions/${subId}/approve`, { method: "PATCH" });
     if (res.ok) {
-      setPayments((prev) => prev.map((p) => p.id === paymentId ? { ...p, payment_status: "paid" } : p));
-      setPayStats((s) => {
-        const p = payments.find((x) => x.id === paymentId);
-        if (!p) return s;
-        return { ...s, totalPaid: s.totalPaid + p.amount_paid, totalPending: s.totalPending - p.amount_paid, totalSlots: s.totalSlots + p.slots_purchased };
+      const updated = await res.json();
+      setSubscriptions((prev) => prev.map((s) => s.id === subId ? { ...s, status: "paid", paid_at: updated.paid_at, expires_at: updated.expires_at } : s));
+      setSubStats((prev) => {
+        const sub = subscriptions.find((s) => s.id === subId);
+        if (!sub) return prev;
+        return { ...prev, totalPaid: prev.totalPaid + sub.amount_paid, totalPending: prev.totalPending - sub.amount_paid };
       });
     }
-  };
-
-  const handleBulkApprovePayments = async () => {
-    const pending = payments.filter((p) => p.payment_status === "pending");
-    await Promise.all(pending.map((p) => handleApprovePayment(p.id)));
   };
 
   const handleBan = async () => {
@@ -215,16 +218,25 @@ export default function SaUserDetailPage() {
     </h2>
   );
 
+  const now = new Date().toISOString();
+  const isMonthlyActive = subStats.activeMonthlyUntil && subStats.activeMonthlyUntil > now;
+
   return (
     <div style={{ padding: "2rem", color: C.text, maxWidth: "900px" }}>
-      {/* Back */}
       <Link href={`/${saPath}/users`} style={{ color: C.muted, textDecoration: "none", fontSize: "0.875rem", display: "inline-flex", alignItems: "center", gap: "0.375rem", marginBottom: "1.25rem" }}>
         ← Back to Users
       </Link>
 
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "1.5rem" }}>{user.business_name}</h1>
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 700 }}>{user.business_name}</h1>
+        {isMonthlyActive && (
+          <span style={{ background: "rgba(104,211,145,0.2)", color: C.success, border: "1px solid rgba(104,211,145,0.4)", borderRadius: "999px", padding: "0.25rem 0.75rem", fontSize: "0.75rem", fontWeight: 700 }}>
+            Monthly Pass Aktif
+          </span>
+        )}
+      </div>
 
-      {/* ── 1. Profile Card ───────────────────────────────────────────── */}
+      {/* ── 1. Profile Card ── */}
       {sectionCard(
         <>
           {sectionTitle("Profile")}
@@ -259,52 +271,45 @@ export default function SaUserDetailPage() {
         </>
       )}
 
-      {/* ── 2. Payment History ────────────────────────────────────────── */}
+      {/* ── 2. Subscription History ── */}
       {sectionCard(
         <>
-          {sectionTitle("Payment History")}
+          {sectionTitle("Subscription History")}
           <div style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
             {[
-              ["Total Paid", formatRp(payStats.totalPaid), C.success],
-              ["Total Pending", formatRp(payStats.totalPending), "#F6E05E"],
-              ["Slots Unlocked", payStats.totalSlots.toString(), C.accent],
+              ["Total Spent", formatRp(subStats.totalPaid), C.success],
+              ["Total Pending", formatRp(subStats.totalPending), "#F6E05E"],
+              ["Active Status", isMonthlyActive ? `Monthly Pass aktif sampai ${formatDate(subStats.activeMonthlyUntil)}` : "Session Unlock only", isMonthlyActive ? C.success : C.muted],
             ].map(([label, val, color]) => (
-              <div key={label as string} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "0.75rem", padding: "1rem 1.25rem", minWidth: "140px" }}>
+              <div key={label as string} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: "0.75rem", padding: "1rem 1.25rem", minWidth: "140px", flex: 1 }}>
                 <div style={{ color: C.muted, fontSize: "0.75rem" }}>{label}</div>
-                <div style={{ color: color as string, fontWeight: 700, fontSize: "1.125rem", marginTop: "0.25rem" }}>{val}</div>
+                <div style={{ color: color as string, fontWeight: 700, fontSize: "0.9375rem", marginTop: "0.25rem" }}>{val as string}</div>
               </div>
             ))}
           </div>
-          {payments.some((p) => p.payment_status === "pending") && (
-            <button
-              onClick={handleBulkApprovePayments}
-              style={{ background: "rgba(104,211,145,0.15)", color: C.success, border: "none", borderRadius: "0.5rem", padding: "0.5rem 1rem", fontWeight: 600, cursor: "pointer", fontSize: "0.875rem", marginBottom: "1rem" }}
-            >
-              Approve All Pending
-            </button>
-          )}
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
               <thead>
                 <tr style={{ background: "rgba(45,49,72,0.4)" }}>
-                  {["Date", "Package", "Slots", "Amount", "Status", "Actions"].map((h) => (
+                  {["Date", "Type", "Session", "Amount", "Status", "Expires At", "Actions"].map((h) => (
                     <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", color: C.muted, fontWeight: 600, fontSize: "0.8125rem" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {payments.length === 0 ? (
-                  <tr><td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: C.muted }}>No payments</td></tr>
-                ) : payments.map((p, idx) => (
-                  <tr key={p.id} style={{ background: idx % 2 === 0 ? "transparent" : "rgba(45,49,72,0.2)", borderTop: `1px solid ${C.border}` }}>
-                    <td style={{ padding: "0.75rem 1rem", color: C.muted, fontSize: "0.8125rem" }}>{formatDate(p.created_at)}</td>
-                    <td style={{ padding: "0.75rem 1rem" }}>{p.payment_type}</td>
-                    <td style={{ padding: "0.75rem 1rem" }}>{p.slots_purchased}</td>
-                    <td style={{ padding: "0.75rem 1rem" }}>{formatRp(p.amount_paid)}</td>
-                    <td style={{ padding: "0.75rem 1rem" }}><StatusBadge value={p.payment_status} options={paymentStatusOptions} /></td>
+                {subscriptions.length === 0 ? (
+                  <tr><td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: C.muted }}>No subscriptions</td></tr>
+                ) : subscriptions.map((s, idx) => (
+                  <tr key={s.id} style={{ background: idx % 2 === 0 ? "transparent" : "rgba(45,49,72,0.2)", borderTop: `1px solid ${C.border}` }}>
+                    <td style={{ padding: "0.75rem 1rem", color: C.muted, fontSize: "0.8125rem" }}>{formatDate(s.created_at)}</td>
+                    <td style={{ padding: "0.75rem 1rem" }}><TypeBadge type={s.type} /></td>
+                    <td style={{ padding: "0.75rem 1rem", color: C.muted, fontSize: "0.8125rem" }}>{s.session_title || "—"}</td>
+                    <td style={{ padding: "0.75rem 1rem" }}>{formatRp(s.amount_paid)}</td>
+                    <td style={{ padding: "0.75rem 1rem" }}><StatusBadge value={s.status} options={subStatusOptions} /></td>
+                    <td style={{ padding: "0.75rem 1rem", color: C.muted, fontSize: "0.8125rem" }}>{formatDate(s.expires_at)}</td>
                     <td style={{ padding: "0.75rem 1rem" }}>
-                      {p.payment_status === "pending" && (
-                        <button onClick={() => handleApprovePayment(p.id)} style={{ background: "rgba(104,211,145,0.15)", color: C.success, border: "none", borderRadius: "0.5rem", padding: "0.25rem 0.625rem", fontWeight: 600, cursor: "pointer", fontSize: "0.8125rem" }}>
+                      {s.status === "pending" && (
+                        <button onClick={() => handleApproveSubscription(s.id)} style={{ background: "rgba(104,211,145,0.15)", color: C.success, border: "none", borderRadius: "0.5rem", padding: "0.25rem 0.625rem", fontWeight: 600, cursor: "pointer", fontSize: "0.8125rem" }}>
                           Approve
                         </button>
                       )}
@@ -317,7 +322,7 @@ export default function SaUserDetailPage() {
         </>
       )}
 
-      {/* ── 3. Sessions ───────────────────────────────────────────────── */}
+      {/* ── 3. Sessions ── */}
       {sectionCard(
         <>
           {sectionTitle(`Sessions (${sessions.length})`)}
@@ -387,12 +392,7 @@ export default function SaUserDetailPage() {
                           </table>
                         </>
                       )}
-                      <a
-                        href={`/p/${s.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: "inline-block", marginTop: "0.75rem", color: C.accent, fontSize: "0.8125rem", textDecoration: "none" }}
-                      >
+                      <a href={`/p/${s.slug}`} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginTop: "0.75rem", color: C.accent, fontSize: "0.8125rem", textDecoration: "none" }}>
                         View public page ↗
                       </a>
                     </div>
@@ -404,7 +404,7 @@ export default function SaUserDetailPage() {
         </>
       )}
 
-      {/* ── 4. Danger Zone ────────────────────────────────────────────── */}
+      {/* ── 4. Danger Zone ── */}
       <div style={{ background: C.surface, border: `1px solid ${C.danger}`, borderRadius: "0.875rem", padding: "1.5rem" }}>
         {sectionTitle("Account Actions")}
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -423,7 +423,7 @@ export default function SaUserDetailPage() {
         </div>
       </div>
 
-      {/* ── Edit Modal ───────────────────────────────────────────────── */}
+      {/* ── Edit Modal ── */}
       {showEdit && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "1rem" }}>
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "1rem", padding: "1.5rem", maxWidth: "440px", width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
@@ -456,9 +456,7 @@ export default function SaUserDetailPage() {
             </div>
             {editError && <div style={{ color: C.danger, fontSize: "0.875rem", marginBottom: "0.75rem" }}>{editError}</div>}
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button onClick={() => setShowEdit(false)} style={{ flex: 1, background: "rgba(113,128,150,0.15)", color: C.muted, border: "none", borderRadius: "0.5rem", padding: "0.625rem", fontWeight: 600, cursor: "pointer" }}>
-                Cancel
-              </button>
+              <button onClick={() => setShowEdit(false)} style={{ flex: 1, background: "rgba(113,128,150,0.15)", color: C.muted, border: "none", borderRadius: "0.5rem", padding: "0.625rem", fontWeight: 600, cursor: "pointer" }}>Cancel</button>
               <button onClick={handleSaveEdit} disabled={editLoading} style={{ flex: 1, background: C.accent, color: "#fff", border: "none", borderRadius: "0.5rem", padding: "0.625rem", fontWeight: 600, cursor: editLoading ? "not-allowed" : "pointer" }}>
                 {editLoading ? "Saving…" : "Save"}
               </button>
@@ -467,7 +465,7 @@ export default function SaUserDetailPage() {
         </div>
       )}
 
-      {/* ── Ban Modal ────────────────────────────────────────────────── */}
+      {/* ── Ban Modal ── */}
       {showBan && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "1rem" }}>
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "1rem", padding: "1.5rem", maxWidth: "400px", width: "100%" }}>
@@ -485,7 +483,7 @@ export default function SaUserDetailPage() {
         </div>
       )}
 
-      {/* ── Delete Modal ─────────────────────────────────────────────── */}
+      {/* ── Delete Modal ── */}
       {showDelete && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "1rem" }}>
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "1rem", padding: "1.5rem", maxWidth: "440px", width: "100%" }}>
