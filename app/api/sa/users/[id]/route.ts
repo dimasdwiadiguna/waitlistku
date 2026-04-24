@@ -11,7 +11,16 @@ async function auth(req: NextRequest) {
 
 type ItemRow = { id: string; session_id: string; name: string; price: number; stock_quota: number | null };
 type OrderRow = { id: string; session_id: string; status: string; total_price: number };
-type PaymentRow = { id: string; session_id: string; payment_type: string; slots_purchased: number; amount_paid: number; payment_status: string; created_at: string };
+type SubRow = {
+  id: string;
+  session_id: string | null;
+  type: string;
+  status: string;
+  amount_paid: number;
+  paid_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+};
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await auth(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const sessionIds = (sessions || []).map((s: { id: string }) => s.id);
 
-  const [itemsRes, ordersRes, paymentsRes] = await Promise.all([
+  const [itemsRes, ordersRes, subsRes] = await Promise.all([
     sessionIds.length
       ? supabase.from("items").select("id, session_id, name, price, stock_quota").in("session_id", sessionIds)
       : Promise.resolve({ data: [] as ItemRow[] }),
@@ -40,8 +49,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       ? supabase.from("orders").select("id, session_id, status, total_price").in("session_id", sessionIds).neq("status", "deleted")
       : Promise.resolve({ data: [] as OrderRow[] }),
     supabase
-      .from("owner_payments")
-      .select("id, session_id, payment_type, slots_purchased, amount_paid, payment_status, created_at")
+      .from("subscriptions")
+      .select("id, session_id, type, status, amount_paid, paid_at, expires_at, created_at")
       .eq("owner_id", params.id)
       .order("created_at", { ascending: false }),
   ]);
@@ -67,20 +76,38 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       order_count: orders.length,
       approved_count: approved.length,
       pending_count: orders.filter((o) => o.status === "pending").length,
-      estimated_revenue: approved.reduce((sum: number, o: OrderRow) => sum + (o.total_price || 0), 0),
+      estimated_revenue: approved.reduce((sum, o) => sum + (o.total_price || 0), 0),
     };
   });
 
-  const payments = (paymentsRes.data || []) as PaymentRow[];
-  const totalPaid = payments.filter((p) => p.payment_status === "paid").reduce((s: number, p) => s + p.amount_paid, 0);
-  const totalPending = payments.filter((p) => p.payment_status === "pending").reduce((s: number, p) => s + p.amount_paid, 0);
-  const totalSlots = payments.filter((p) => p.payment_status === "paid").reduce((s: number, p) => s + p.slots_purchased, 0);
+  const subs = (subsRes.data || []) as SubRow[];
+  const totalPaid = subs.filter((s) => s.status === "paid").reduce((sum, s) => sum + s.amount_paid, 0);
+  const totalPending = subs.filter((s) => s.status === "pending").reduce((sum, s) => sum + s.amount_paid, 0);
+
+  const now = new Date().toISOString();
+  const activeMonthly = subs.find(
+    (s) => s.type === "monthly_pass" && s.status === "paid" && s.expires_at && s.expires_at > now
+  );
+
+  const sessionTitleById: Record<string, string> = {};
+  for (const s of (sessions || []) as { id: string; title: string }[]) {
+    sessionTitleById[s.id] = s.title;
+  }
+
+  const subsWithSessionTitle = subs.map((s) => ({
+    ...s,
+    session_title: s.session_id ? (sessionTitleById[s.session_id] || null) : null,
+  }));
 
   return NextResponse.json({
     user,
     sessions: sessionsWithStats,
-    payments,
-    payment_stats: { totalPaid, totalPending, totalSlots },
+    subscriptions: subsWithSessionTitle,
+    subscription_stats: {
+      totalPaid,
+      totalPending,
+      activeMonthlyUntil: activeMonthly?.expires_at || null,
+    },
   });
 }
 
@@ -114,7 +141,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await auth(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // ON DELETE CASCADE handles sessions → items → promos → orders → order_items → owner_payments
+  // ON DELETE CASCADE handles sessions → items → promos → orders → order_items → subscriptions
   const { error } = await supabase.from("users").delete().eq("id", params.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
