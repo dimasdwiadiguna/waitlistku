@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
   const { data: user } = await supabase
     .from("users")
-    .select("id, email, password_hash")
+    .select("id, email, password_hash, is_banned")
     .eq("email", email)
     .single();
 
@@ -23,6 +23,16 @@ export async function POST(req: NextRequest) {
   if (!valid) {
     return NextResponse.json({ error: "Email atau password salah" }, { status: 401 });
   }
+
+  if (user.is_banned) {
+    return NextResponse.json(
+      { error: "Akun kamu dinonaktifkan. Hubungi kami untuk informasi lebih lanjut." },
+      { status: 403 }
+    );
+  }
+
+  // Update last sign in timestamp
+  await supabase.from("users").update({ last_sign_in: new Date().toISOString() }).eq("id", user.id);
 
   const token = await signToken({ userId: user.id, email: user.email });
   const cookieOpts = getCookieOptions();
