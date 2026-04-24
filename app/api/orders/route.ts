@@ -30,17 +30,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sesi sudah ditutup" }, { status: 400 });
   }
 
-  // Prevent duplicate orders from the same WA number in this session
-  const { data: existingOrder } = await supabase
+  // Cap orders per WA number per session at 10
+  const { count: waOrderCount } = await supabase
     .from("orders")
-    .select("id")
+    .select("id", { count: "exact", head: true })
     .eq("session_id", session_id)
     .eq("customer_wa", customer_wa)
-    .neq("status", "deleted")
-    .limit(1)
-    .single();
-  if (existingOrder) {
-    return NextResponse.json({ error: "Nomor WhatsApp ini sudah memiliki pesanan aktif untuk sesi ini." }, { status: 409 });
+    .neq("status", "deleted");
+  if ((waOrderCount ?? 0) >= 10) {
+    return NextResponse.json({ error: "Nomor WhatsApp ini sudah mencapai batas maksimal pesanan untuk sesi ini." }, { status: 429 });
   }
 
   // Validate quota for each item
