@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/LanguageContext";
 import { Toaster } from "react-hot-toast";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "Waitlistku — Kelola Preorder Bisnismu",
@@ -28,6 +29,7 @@ export default function RootLayout({
           {children}
           <Toaster position="top-right" />
         </LanguageProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
