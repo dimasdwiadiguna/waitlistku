@@ -204,7 +204,10 @@ export default function SessionPage() {
       setSession(data);
       setShowSettingsModal(false);
       toast.success("Pengaturan disimpan");
-    } else toast.error("Gagal menyimpan");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error || "Gagal menyimpan");
+    }
   };
 
   const saveStyling = async () => {
