@@ -3,6 +3,7 @@ import "./globals.css";
 import { LanguageProvider } from "@/lib/LanguageContext";
 import { Toaster } from "react-hot-toast";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL?.startsWith("http") ? process.env.NEXT_PUBLIC_APP_URL : `https://${process.env.NEXT_PUBLIC_APP_URL || "localhost:3000"}`),
@@ -31,6 +32,7 @@ export default function RootLayout({
           <Toaster position="top-right" />
         </LanguageProvider>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
