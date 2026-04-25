@@ -4,7 +4,7 @@ import { LanguageProvider } from "@/lib/LanguageContext";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL?.startsWith("http") ? process.env.NEXT_PUBLIC_APP_URL : `https://${process.env.NEXT_PUBLIC_APP_URL || "localhost:3000"}`),
   title: "Waitlistku — Kelola Preorder Bisnismu",
   description: "Platform manajemen preorder untuk UMKM Indonesia",
 };
