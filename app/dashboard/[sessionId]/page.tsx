@@ -168,7 +168,13 @@ export default function SessionPage() {
 
   const fetchOgImages = async () => {
     const res = await fetch("/api/og-images");
-    if (res.ok) setOgImages(await res.json());
+    if (res.ok) {
+      setOgImages(await res.json());
+    } else {
+      const data = await res.json().catch(() => ({}));
+      console.error("fetchOgImages error:", data.error);
+      toast.error("Gagal memuat daftar gambar: " + (data.error || res.status));
+    }
   };
 
   const fetchSummary = async () => {
