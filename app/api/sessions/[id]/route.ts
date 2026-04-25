@@ -29,11 +29,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { title, intro_text, footer_text, opens_at, closes_at, is_active, primary_color, accent_color, payment_instructions } = body;
+  const { title, intro_text, footer_text, opens_at, closes_at, is_active, primary_color, accent_color, payment_instructions, og_title, og_description, og_image } = body;
 
   const { data, error } = await supabase
     .from("sessions")
-    .update({ title, intro_text, footer_text, opens_at, closes_at, is_active, primary_color: primary_color || null, accent_color: accent_color || null, payment_instructions: payment_instructions || null })
+    .update({ title, intro_text, footer_text, opens_at, closes_at, is_active, primary_color: primary_color || null, accent_color: accent_color || null, payment_instructions: payment_instructions || null, og_title: og_title || null, og_description: og_description || null, og_image: og_image || null })
     .eq("id", params.id)
     .select()
     .single();
