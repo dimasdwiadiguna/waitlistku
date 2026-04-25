@@ -28,6 +28,9 @@ create table sessions (
   primary_color text,
   accent_color text,
   payment_instructions text,
+  og_title text,
+  og_description text,
+  og_image text,
   created_at timestamptz default now()
 );
 
@@ -81,6 +84,14 @@ create table order_items (
   created_at timestamptz default now()
 );
 
+-- OG images library (uploaded by superadmin, available to all owners)
+create table og_images (
+  id uuid primary key default uuid_generate_v4(),
+  url text not null,
+  name text not null,
+  created_at timestamptz default now()
+);
+
 -- Subscriptions (replaces owner_payments)
 create table subscriptions (
   id uuid primary key default uuid_generate_v4(),
@@ -110,6 +121,9 @@ create index on subscriptions(session_id, type, status);
 -- alter table sessions add column if not exists primary_color text;
 -- alter table sessions add column if not exists accent_color text;
 -- alter table sessions add column if not exists payment_instructions text;
+-- alter table sessions add column if not exists og_title text;
+-- alter table sessions add column if not exists og_description text;
+-- alter table sessions add column if not exists og_image text;
 
 -- Superadmin additions (run in Supabase SQL Editor)
 alter table users add column if not exists role text check (role in ('personal','tester')) default 'personal';

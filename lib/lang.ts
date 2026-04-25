@@ -208,6 +208,27 @@ export const id = {
   // Session payment instructions (settings modal)
   session_payment_instructions_label: "Tata Cara Pembayaran",
   session_payment_instructions_placeholder: "Contoh: Transfer ke BCA 1234567890 a/n Toko Saya, lalu kirim bukti pembayaran.",
+
+  // Link preview (OG)
+  session_og_title_label: "Judul Link Preview",
+  session_og_title_placeholder: "Contoh: Pre-Order Baju Lebaran 2025 — Toko Saya",
+  session_og_desc_label: "Deskripsi Link Preview",
+  session_og_desc_placeholder: "Contoh: Dapatkan baju lebaran eksklusif dengan harga spesial. Stok terbatas!",
+  session_og_hint: "Tampil saat link dibagikan di WhatsApp, Twitter, dll.",
+  session_og_image_label: "Thumbnail Link Preview",
+  session_og_image_empty: "Belum ada gambar tersedia. Admin belum mengunggah gambar.",
+
+  // SA og-images panel
+  sa_og_images_title: "Kelola Gambar OG",
+  sa_og_upload_btn: "Upload Gambar",
+  sa_og_upload_name: "Nama Gambar",
+  sa_og_upload_file: "Pilih File (JPG/PNG/WebP, max 2MB)",
+  sa_og_upload_submit: "Upload",
+  sa_og_upload_success: "Gambar berhasil diupload",
+  sa_og_upload_error: "Gagal mengupload gambar",
+  sa_og_delete_confirm: "Hapus gambar ini?",
+  sa_og_delete_success: "Gambar dihapus",
+  sa_og_images_empty: "Belum ada gambar.",
 };
 
 export const en = {
@@ -420,6 +441,27 @@ export const en = {
   // Session payment instructions (settings modal)
   session_payment_instructions_label: "Payment Instructions",
   session_payment_instructions_placeholder: "e.g. Transfer to BCA 1234567890 a/n My Store, then send proof of payment.",
+
+  // Link preview (OG)
+  session_og_title_label: "Link Preview Title",
+  session_og_title_placeholder: "e.g. Pre-Order Eid Collection 2025 — My Store",
+  session_og_desc_label: "Link Preview Description",
+  session_og_desc_placeholder: "e.g. Get exclusive pieces at special prices. Limited stock!",
+  session_og_hint: "Shown when the link is shared on WhatsApp, Twitter, etc.",
+  session_og_image_label: "Link Preview Thumbnail",
+  session_og_image_empty: "No images available yet. Admin hasn't uploaded any images.",
+
+  // SA og-images panel
+  sa_og_images_title: "Manage OG Images",
+  sa_og_upload_btn: "Upload Image",
+  sa_og_upload_name: "Image Name",
+  sa_og_upload_file: "Select File (JPG/PNG/WebP, max 2MB)",
+  sa_og_upload_submit: "Upload",
+  sa_og_upload_success: "Image uploaded successfully",
+  sa_og_upload_error: "Failed to upload image",
+  sa_og_delete_confirm: "Delete this image?",
+  sa_og_delete_success: "Image deleted",
+  sa_og_images_empty: "No images yet.",
 };
 
 export type LangKeys = keyof typeof id;

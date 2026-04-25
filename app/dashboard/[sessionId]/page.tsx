@@ -23,6 +23,9 @@ interface Session {
   primary_color: string | null;
   accent_color: string | null;
   payment_instructions: string | null;
+  og_title: string | null;
+  og_description: string | null;
+  og_image: string | null;
 }
 interface Item {
   id: string;
@@ -101,7 +104,11 @@ export default function SessionPage() {
     closes_at: "",
     is_active: true,
     payment_instructions: "",
+    og_title: "",
+    og_description: "",
+    og_image: "",
   });
+  const [ogImages, setOgImages] = useState<{ id: string; url: string; name: string }[]>([]);
 
   const [styling, setStyling] = useState({
     primary_color: "",
@@ -133,6 +140,9 @@ export default function SessionPage() {
       closes_at: data.closes_at ? data.closes_at.slice(0, 16) : "",
       is_active: data.is_active ?? true,
       payment_instructions: data.payment_instructions || "",
+      og_title: data.og_title || "",
+      og_description: data.og_description || "",
+      og_image: data.og_image || "",
     });
     setStyling({
       primary_color: data.primary_color || "",
@@ -154,6 +164,11 @@ export default function SessionPage() {
     const res = await fetch(`/api/sessions/${sessionId}/promos`);
     if (res.ok) setPromos(await res.json());
     setTabLoading(false);
+  };
+
+  const fetchOgImages = async () => {
+    const res = await fetch("/api/og-images");
+    if (res.ok) setOgImages(await res.json());
   };
 
   const fetchSummary = async () => {
@@ -410,7 +425,7 @@ export default function SessionPage() {
                 🎨 {lang.btn_styling}
               </button>
               <button
-                onClick={() => setShowSettingsModal(true)}
+                onClick={() => { setShowSettingsModal(true); fetchOgImages(); }}
                 className="border border-gray-200 text-gray-600 font-medium px-3 py-2 rounded-xl hover:border-teal-600 hover:text-teal-600 transition-colors text-sm"
               >
                 {lang.btn_edit_settings}
@@ -512,6 +527,68 @@ export default function SessionPage() {
                     placeholder={lang.session_payment_instructions_placeholder}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 h-24 resize-none"
                   />
+                </div>
+
+                {/* Link Preview (OG) */}
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Link Preview</p>
+                  <p className="text-xs text-gray-400 mb-3">{lang.session_og_hint}</p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_og_title_label}</label>
+                      <input
+                        value={settings.og_title}
+                        onChange={(e) => setSettings((s) => ({ ...s, og_title: e.target.value }))}
+                        placeholder={lang.session_og_title_placeholder}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_og_desc_label}</label>
+                      <textarea
+                        value={settings.og_description}
+                        onChange={(e) => setSettings((s) => ({ ...s, og_description: e.target.value }))}
+                        placeholder={lang.session_og_desc_placeholder}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 h-16 resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 block mb-1">{lang.session_og_image_label}</label>
+                      {ogImages.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic">{lang.session_og_image_empty}</p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
+                          {/* Clear selection */}
+                          <button
+                            type="button"
+                            onClick={() => setSettings((s) => ({ ...s, og_image: "" }))}
+                            className={`aspect-square rounded-lg border-2 flex items-center justify-center text-xs font-medium transition-colors ${
+                              !settings.og_image ? "border-teal-500 bg-teal-50 text-teal-700" : "border-gray-200 text-gray-400 hover:border-gray-300"
+                            }`}
+                          >
+                            {!settings.og_image ? "✓ None" : "None"}
+                          </button>
+                          {ogImages.map((img) => (
+                            <button
+                              key={img.id}
+                              type="button"
+                              onClick={() => setSettings((s) => ({ ...s, og_image: img.url }))}
+                              className={`aspect-square rounded-lg border-2 overflow-hidden transition-colors ${
+                                settings.og_image === img.url ? "border-teal-500" : "border-gray-200 hover:border-gray-300"
+                              }`}
+                              title={img.name}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {settings.og_image && (
+                        <p className="text-xs text-teal-600 mt-1 truncate">Terpilih: {settings.og_image.split("/").pop()}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="px-6 pb-6 flex gap-3">
