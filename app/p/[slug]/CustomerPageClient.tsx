@@ -469,7 +469,7 @@ export default function CustomerPageClient({ slug }: { slug: string }) {
         <div className="max-w-xl mx-auto flex items-center justify-between gap-3 px-4 py-2.5">
           <p className="text-xs font-medium text-gray-600 leading-tight">Tertarik bikin halaman preorder seperti ini?</p>
           <a
-            href="/register"
+            href="/"
             className="shrink-0 bg-teal-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-teal-700 transition-colors whitespace-nowrap"
           >
             Buat gratis
