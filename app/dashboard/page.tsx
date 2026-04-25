@@ -72,6 +72,10 @@ export default function DashboardPage() {
     setSessions((s) => s.filter((sess) => sess.id !== id));
   };
 
+  const handleClone = (newSession: Session) => {
+    setSessions((s) => [newSession, ...s]);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar isLoggedIn />
@@ -100,7 +104,7 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-4">
             {sessions.map((s) => (
-              <SessionCard key={s.id} session={s} onDelete={handleDelete} />
+              <SessionCard key={s.id} session={s} onDelete={handleDelete} onClone={handleClone} />
             ))}
           </div>
         )}

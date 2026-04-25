@@ -52,6 +52,7 @@ export const id = {
   session_slug: "Link",
   session_copy: "Salin",
   session_copied: "Tersalin!",
+  session_clone: "Duplikat",
 
   // Session modal
   modal_new_session: "Buat Sesi Baru",
@@ -71,6 +72,7 @@ export const id = {
   btn_import: "Import XLSX",
   btn_template: "Unduh Template",
   btn_export: "Export Pesanan",
+  btn_export_items: "Download Produk",
 
   // Tabs
   tab_products: "Produk",
@@ -285,6 +287,7 @@ export const en = {
   session_slug: "Link",
   session_copy: "Copy",
   session_copied: "Copied!",
+  session_clone: "Duplicate",
 
   // Session modal
   modal_new_session: "Create New Session",
@@ -304,6 +307,7 @@ export const en = {
   btn_import: "Import XLSX",
   btn_template: "Download Template",
   btn_export: "Export Orders",
+  btn_export_items: "Download Items",
 
   // Tabs
   tab_products: "Products",
