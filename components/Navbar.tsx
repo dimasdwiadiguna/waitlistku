@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useLang } from "@/lib/LanguageContext";
 import toast from "react-hot-toast";
@@ -43,8 +44,8 @@ export default function Navbar({ isLoggedIn }: { isLoggedIn?: boolean }) {
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="font-extrabold text-teal-600 text-lg tracking-tight">
-          Waitlistku
+        <Link href="/">
+          <Image src="/logowlku.png" alt="Waitlistku" width={120} height={32} className="h-8 w-auto" />
         </Link>
 
         <div className="flex items-center gap-2">

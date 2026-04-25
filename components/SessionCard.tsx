@@ -18,12 +18,15 @@ interface Session {
 export default function SessionCard({
   session,
   onDelete,
+  onClone,
 }: {
   session: Session;
   onDelete: (id: string) => void;
+  onClone: (newSession: Session) => void;
 }) {
   const { lang } = useLang();
   const [copied, setCopied] = useState(false);
+  const [cloning, setCloning] = useState(false);
 
   const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/p/${session.slug}`;
   const orderCount =
@@ -36,6 +39,19 @@ export default function SessionCard({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success(lang.session_copied);
+  };
+
+  const handleClone = async () => {
+    setCloning(true);
+    const res = await fetch(`/api/sessions/${session.id}/clone`, { method: "POST" });
+    if (res.ok) {
+      const cloned = await res.json();
+      toast.success("Sesi berhasil diduplikat");
+      onClone(cloned);
+    } else {
+      toast.error("Gagal menduplikat sesi");
+    }
+    setCloning(false);
   };
 
   const handleDelete = async () => {
@@ -103,6 +119,14 @@ export default function SessionCard({
         >
           {lang.session_open_page}
         </a>
+        <button
+          onClick={handleClone}
+          disabled={cloning}
+          className="text-sm font-medium px-3 py-2 border border-gray-200 text-gray-600 rounded-lg hover:border-teal-600 hover:text-teal-600 transition-colors disabled:opacity-50"
+          title={lang.session_clone}
+        >
+          {cloning ? "..." : "⎘"}
+        </button>
         <button
           onClick={handleDelete}
           className="text-sm font-medium px-3 py-2 border border-red-100 text-red-400 rounded-lg hover:border-red-400 hover:text-red-600 transition-colors"

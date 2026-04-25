@@ -342,6 +342,22 @@ export default function SessionPage() {
     if (importRef.current) importRef.current.value = "";
   };
 
+  const handleExportItems = async () => {
+    const res = await fetch(`/api/sessions/${sessionId}/items/export`);
+    if (!res.ok) {
+      const data = await res.json();
+      toast.error(data.error || "Gagal mengekspor produk");
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `produk-${session?.title || "export"}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleDownloadTemplate = () => {
     import("@/lib/xlsx").then(({ generateItemTemplate }) => {
       const blob = generateItemTemplate();
@@ -653,6 +669,11 @@ export default function SessionPage() {
               <button onClick={handleDownloadTemplate} className="border border-gray-200 text-gray-600 font-medium px-4 py-2 rounded-xl hover:border-teal-600 hover:text-teal-600 transition-colors text-sm">
                 {lang.btn_template}
               </button>
+              {items.length > 0 && (
+                <button onClick={handleExportItems} className="border border-gray-200 text-gray-600 font-medium px-4 py-2 rounded-xl hover:border-teal-600 hover:text-teal-600 transition-colors text-sm">
+                  ↓ {lang.btn_export_items}
+                </button>
+              )}
             </div>
 
             {items.length === 0 ? (
