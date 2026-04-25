@@ -13,7 +13,10 @@ export async function generateMetadata(
 
   const title = session?.og_title || session?.title || "Preorder";
   const description = session?.og_description || session?.intro_text || "Halaman preorder Waitlistku";
-  const image = session?.og_image || undefined;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const defaultImage = appUrl ? `${appUrl}/og-default.png` : undefined;
+  const image = session?.og_image || defaultImage;
 
   return {
     title,
@@ -22,10 +25,10 @@ export async function generateMetadata(
       title,
       description,
       type: "website",
-      ...(image ? { images: [{ url: image }] } : {}),
+      images: image ? [{ url: image, width: 1200, height: 630 }] : [],
     },
     twitter: {
-      card: image ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title,
       description,
       ...(image ? { images: [image] } : {}),
